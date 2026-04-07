@@ -106,7 +106,6 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
-/* ===================== USER VERIFICATIONS ===================== */
 export const userVerifications = sqliteTable("user_verifications", {
   id: text("id").primaryKey(),
 
@@ -120,15 +119,17 @@ export const userVerifications = sqliteTable("user_verifications", {
 
   status: text("status", {
     enum: ["pending", "approved", "rejected"],
-  }).default("pending").notNull(),
+  })
+    .default("pending")
+    .notNull(),
 
-  reviewedBy: text("reviewed_by")
-    .references(() => user.id),
+  reviewedBy: text("reviewed_by").references(() => user.id),
 
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: text("created_at")
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
 });
 
-/* ===================== HACKATHONS ===================== */
 export const hackathons = sqliteTable("hackathons", {
   id: text("id").primaryKey(),
 
@@ -155,7 +156,6 @@ export const problemStatements = sqliteTable("problem_statements", {
   description: text("description"),
 });
 
-/* ===================== TEAMS ===================== */
 export const teams = sqliteTable("teams", {
   id: text("id").primaryKey(),
 
@@ -170,7 +170,6 @@ export const teams = sqliteTable("teams", {
     .references(() => user.id),
 });
 
-/* ===================== TEAM MEMBERS ===================== */
 export const teamMembers = sqliteTable("team_members", {
   id: text("id").primaryKey(),
 
@@ -181,9 +180,36 @@ export const teamMembers = sqliteTable("team_members", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  status: text("status", {
+    enum: ["pending", "approved"],
+  })
+    .default("pending")
+    .notNull(),
 });
 
-/* ===================== SUBMISSIONS ===================== */
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  hackathon: one(hackathons, {
+    fields: [teams.hackathonId],
+    references: [hackathons.id],
+  }),
+  leader: one(user, {
+    fields: [teams.leaderId],
+    references: [user.id],
+  }),
+  members: many(teamMembers),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(user, {
+    fields: [teamMembers.userId],
+    references: [user.id],
+  }),
+}));
+
 export const submissions = sqliteTable("submissions", {
   id: text("id").primaryKey(),
 
@@ -202,7 +228,6 @@ export const submissions = sqliteTable("submissions", {
     .notNull(),
 });
 
-/* ===================== EVALUATIONS ===================== */
 export const evaluations = sqliteTable("evaluations", {
   id: text("id").primaryKey(),
 
@@ -223,7 +248,6 @@ export const evaluations = sqliteTable("evaluations", {
   total: integer("total_score").notNull(),
 });
 
-/* ===================== QR CODES ===================== */
 export const qrCodes = sqliteTable("qr_codes", {
   id: text("id").primaryKey(),
 
@@ -237,9 +261,7 @@ export const qrCodes = sqliteTable("qr_codes", {
 
   token: text("token").notNull().unique(),
 
-  isUsed: integer("is_used", { mode: "boolean" })
-    .default(false)
-    .notNull(),
+  isUsed: integer("is_used", { mode: "boolean" }).default(false).notNull(),
 
   expiresAt: text("expires_at").notNull(),
 
@@ -248,7 +270,6 @@ export const qrCodes = sqliteTable("qr_codes", {
     .notNull(),
 });
 
-/* ===================== QR SCANS ===================== */
 export const qrScans = sqliteTable("qr_scans", {
   id: text("id").primaryKey(),
 
@@ -265,7 +286,6 @@ export const qrScans = sqliteTable("qr_scans", {
     .notNull(),
 });
 
-/* ===================== SHORTLISTED TEAMS ===================== */
 export const shortlistedTeams = sqliteTable("shortlisted_teams", {
   id: text("id").primaryKey(),
 
@@ -298,5 +318,3 @@ export const certificates = sqliteTable("certificates", {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
-
-

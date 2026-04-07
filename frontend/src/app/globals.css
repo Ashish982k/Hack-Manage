@@ -24,3 +24,90 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.hx-headline-line {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: hxHeadlineIn 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.hx-headline-line--delay {
+  animation-delay: 120ms;
+}
+
+.hx-shimmer {
+  background-size: 220% 100%;
+  animation: hxShimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes hxHeadlineIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hxShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.hx-tilt {
+  --hx-rx: 0deg;
+  --hx-ry: 0deg;
+  --hx-gx: 50%;
+  --hx-gy: 50%;
+  perspective: 1200px;
+  position: relative;
+}
+
+.hx-tilt__card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transform: rotateX(var(--hx-rx)) rotateY(var(--hx-ry)) translateZ(0);
+  transition: transform 140ms ease;
+}
+
+.hx-tilt:hover .hx-tilt__card {
+  transition: transform 40ms linear;
+}
+
+.hx-tilt__glare {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  background: radial-gradient(
+    800px circle at var(--hx-gx) var(--hx-gy),
+    rgba(255, 255, 255, 0.14),
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.hx-tilt:hover .hx-tilt__glare {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx-headline-line,
+  .hx-shimmer {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hx-tilt__card {
+    transition: none;
+    transform: none;
+  }
+}

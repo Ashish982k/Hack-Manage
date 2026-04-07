@@ -1,0 +1,1 @@
+ALTER TABLE `team_members` ADD `status` text DEFAULT 'pending' NOT NULL;

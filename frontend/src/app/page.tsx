@@ -1,5 +1,4 @@
 "use client";
-
 import * as React from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -22,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authClient } from "@/lib/auth-client";
+import { Icon } from "@/components/icon";
+import { Navbar } from "@/components/navbar";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,6 +32,23 @@ function Glow() {
       <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/35 via-pink-500/25 to-blue-500/25 blur-3xl" />
       <div className="absolute right-[-140px] top-[220px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
       <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/15 blur-3xl" />
+    </div>
+  );
+}
+
+function AnimatedHeadline() {
+  return (
+    <div>
+      <h1 className="text-balance text-5xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl">
+        <span className="hx-headline-line">FORGE THE FUTURE</span>
+        <br />
+        <span className="hx-headline-line hx-headline-line--delay">
+          IN{" "}
+          <span className="hx-shimmer bg-gradient-to-r from-purple-300 via-pink-200 to-blue-200 bg-clip-text text-transparent">
+            CODE
+          </span>
+        </span>
+      </h1>
     </div>
   );
 }
@@ -71,83 +89,32 @@ function SectionHeading({
   );
 }
 
-function Navbar() {
-  const links = [
-    { label: "Features", href: "#features" },
-    { label: "Workflow", href: "#workflow" },
-    { label: "Contact", href: "#contact" },
-  ];
+function Hero() {
+  const tiltRef = React.useRef<HTMLDivElement | null>(null);
 
-  const router = useRouter();
-  const { data: session, isPending, error, refetch } = authClient.useSession();
-
-  const handleSignOut = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/"); 
-        },
-      },
-    });
+  const onTiltMove = (e: React.MouseEvent) => {
+    const el = tiltRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    const rotateY = (px - 0.5) * 12;
+    const rotateX = (0.5 - py) * 10;
+    el.style.setProperty("--hx-rx", `${rotateX.toFixed(2)}deg`);
+    el.style.setProperty("--hx-ry", `${rotateY.toFixed(2)}deg`);
+    el.style.setProperty("--hx-gx", `${(px * 100).toFixed(1)}%`);
+    el.style.setProperty("--hx-gy", `${(py * 100).toFixed(1)}%`);
   };
 
-  return (
-    <div className="sticky top-0 z-40 border-b border-white/10 bg-black/30 backdrop-blur-xl">
-      <Container>
-        <div className="flex h-16 items-center justify-between">
-          <a href="#" className="flex items-center gap-2 text-white">
-            <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/60 via-pink-500/40 to-blue-500/50 shadow-[0_0_0_1px_rgba(255,255,255,0.10)]">
-              <Crown className="size-4" />
-            </span>
-            <span className="text-sm font-semibold tracking-wide">
-              HackathonX
-            </span>
-          </a>
+  const onTiltLeave = () => {
+    const el = tiltRef.current;
+    if (!el) return;
+    el.style.setProperty("--hx-rx", `0deg`);
+    el.style.setProperty("--hx-ry", `0deg`);
+    el.style.setProperty("--hx-gx", `50%`);
+    el.style.setProperty("--hx-gy", `50%`);
+  };
 
-          <nav className="hidden items-center gap-7 md:flex">
-            {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="text-sm text-white/70 hover:text-white transition-colors"
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            {!session && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden sm:inline-flex"
-                onClick={() => router.push("/login")}
-              >
-                Login
-              </Button>
-            )}
-            {session && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden sm:inline-flex"
-                onClick={() => handleSignOut()}
-              >
-                Sign Out
-              </Button>
-            )}
-            <Button variant="primary" size="sm">
-              Get Started
-            </Button>
-          </div>
-        </div>
-      </Container>
-    </div>
-  );
-}
-
-function Hero() {
   return (
     <section className="relative overflow-hidden pt-10 sm:pt-16">
       <Glow />
@@ -157,149 +124,163 @@ function Hero() {
             <div data-reveal="up">
               <Badge variant="glow" className="inline-flex">
                 <ShieldCheck className="mr-2 size-4" />
-                Smart verification. Secure QR entry. Live scoring.
+                Designed for modern hackathons
               </Badge>
             </div>
 
-            <h1
-              data-reveal="up"
-              className="mt-5 text-balance text-5xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl"
-            >
-              Run Hackathons Without Chaos
-            </h1>
+            <div data-reveal="up" className="mt-6">
+              <AnimatedHeadline />
+            </div>
 
             <p
               data-reveal="up"
               className="mt-5 max-w-xl text-pretty text-base text-white/70 sm:text-lg"
             >
-              From registration to final evaluation — fully automated with smart
-              verification, QR entry, and real-time scoring.
+              The premium operating system for high-stakes hackathons — team
+              management, submissions, secure QR entry, and evaluator-ready
+              scoring.
             </p>
 
             <div data-reveal="up" className="mt-8 flex flex-wrap gap-3">
               <Button variant="primary" size="lg">
-                Get Started
+                Launch a Hackathon
               </Button>
               <Button variant="outline" size="lg">
-                Explore Features
+                View Demo
               </Button>
             </div>
 
             <div data-reveal="up" className="mt-8 flex flex-wrap gap-2">
-              <Badge>College-ready</Badge>
-              <Badge>Fraud-resistant</Badge>
-              <Badge>Queue-less entry</Badge>
-              <Badge>Live leaderboard</Badge>
+              <Badge>Team-first</Badge>
+              <Badge>Verification</Badge>
+              <Badge>QR entry</Badge>
+              <Badge>Scoring</Badge>
             </div>
           </div>
 
           <div data-reveal="up" className="relative">
             <div className="absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-purple-500/25 via-pink-500/20 to-blue-500/20 blur-2xl" />
-            <Card className="rounded-3xl">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
-                      <LayoutDashboard className="size-4 text-white/80" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        HackathonX Console
-                      </p>
-                      <p className="text-xs text-white/60">Live ops preview</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-500/20">
-                    Live
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <Users className="size-4" />
-                      <span className="text-sm">Registered</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      1,248
-                    </p>
-                    <p className="mt-1 text-xs text-white/60">+22% this week</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <Boxes className="size-4" />
-                      <span className="text-sm">Teams</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      312
-                    </p>
-                    <p className="mt-1 text-xs text-white/60">
-                      Auto-balanced invites
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <QrCode className="size-4" />
-                      <span className="text-sm">QR Check-ins</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      968
-                    </p>
-                    <p className="mt-1 text-xs text-white/60">No duplicates</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <BarChart3 className="size-4" />
-                      <span className="text-sm">Avg. Score</span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      8.6
-                    </p>
-                    <p className="mt-1 text-xs text-white/60">
-                      Realtime ranking
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-4">
+            <div
+              ref={tiltRef}
+              onMouseMove={onTiltMove}
+              onMouseLeave={onTiltLeave}
+              className="hx-tilt"
+            >
+              <Card className="rounded-3xl hx-tilt__card">
+                <CardHeader>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white">QR Pass</p>
-                    <Badge className="bg-purple-500/10 text-purple-200 ring-1 ring-purple-500/20">
-                      Secure
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
+                        <LayoutDashboard className="size-4 text-white/80" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          HackathonX Console
+                        </p>
+                        <p className="text-xs text-white/60">
+                          Live ops preview
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-500/20">
+                      Live
                     </Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-[88px_1fr] gap-4">
-                    <div className="flex size-[88px] items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
-                      <div className="grid grid-cols-5 gap-1">
-                        {Array.from({ length: 25 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className={
-                              i % 7 === 0 || i % 5 === 0
-                                ? "size-2 rounded-[3px] bg-white/80"
-                                : "size-2 rounded-[3px] bg-white/15"
-                            }
-                          />
-                        ))}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-2 text-white/80">
+                        <Users className="size-4" />
+                        <span className="text-sm">Registered</span>
                       </div>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-white/80">
-                        Entry + Food access
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        1,248
                       </p>
                       <p className="mt-1 text-xs text-white/60">
-                        Scan once. Marked instantly. Track usage per student.
+                        +22% this week
                       </p>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
-                        <BadgeCheck className="size-4 text-emerald-300" />
-                        Verified • Non-transferable
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-2 text-white/80">
+                        <Boxes className="size-4" />
+                        <span className="text-sm">Teams</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        312
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        Auto-balanced invites
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-2 text-white/80">
+                        <QrCode className="size-4" />
+                        <span className="text-sm">QR Check-ins</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        968
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        No duplicates
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center gap-2 text-white/80">
+                        <BarChart3 className="size-4" />
+                        <span className="text-sm">Avg. Score</span>
+                      </div>
+                      <p className="mt-2 text-2xl font-semibold text-white">
+                        8.6
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        Realtime ranking
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">
+                        QR Pass
+                      </p>
+                      <Badge className="bg-purple-500/10 text-purple-200 ring-1 ring-purple-500/20">
+                        Secure
+                      </Badge>
+                    </div>
+                    <div className="mt-4 grid grid-cols-[88px_1fr] gap-4">
+                      <div className="flex size-[88px] items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
+                        <div className="grid grid-cols-5 gap-1">
+                          {Array.from({ length: 25 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={
+                                i % 7 === 0 || i % 5 === 0
+                                  ? "size-2 rounded-[3px] bg-white/80"
+                                  : "size-2 rounded-[3px] bg-white/15"
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-white/80">
+                          Entry + Food access
+                        </p>
+                        <p className="mt-1 text-xs text-white/60">
+                          Scan once. Marked instantly. Track usage per student.
+                        </p>
+                        <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
+                          <BadgeCheck className="size-4 text-emerald-300" />
+                          Verified • Non-transferable
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              <div className="hx-tilt__glare" aria-hidden />
+            </div>
           </div>
         </div>
       </Container>

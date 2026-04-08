@@ -1,13 +1,16 @@
 "use client";
 
-
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronRight } from "lucide-react";
-
-import { HACKATHONS } from "@/lib/hackathons";
+import { Calendar, ChevronRight, Plus } from "lucide-react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 function Glow() {
   return (
@@ -22,90 +25,220 @@ function Glow() {
 export default function HackathonsPage() {
   const router = useRouter();
 
+  const [hackathons, setHackathons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  const headerAnimatedRef = useRef(false);
+  const cardsAnimatedRef = useRef(false);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/hackathons", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setHackathons(data.hackathons || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
+  // Header animations
+  useLayoutEffect(() => {
+    if (headerAnimatedRef.current) return;
+    headerAnimatedRef.current = true;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+
+      tl.from(badgeRef.current, {
+        opacity: 0,
+        y: -20,
+        duration: 0.6,
+        ease: "power3.out",
+      })
+        .from(
+          titleRef.current,
+          {
+            opacity: 0,
+            y: 30,
+            duration: 0.8,
+            ease: "power3.out",
+          },
+          "-=0.3",
+        )
+        .from(
+          descRef.current,
+          {
+            opacity: 0,
+            y: 20,
+            duration: 0.6,
+            ease: "power3.out",
+          },
+          "-=0.4",
+        )
+        .from(
+          statsRef.current,
+          {
+            opacity: 0,
+            scale: 0.9,
+            duration: 0.6,
+            ease: "back.out(1.7)",
+          },
+          "-=0.3",
+        );
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  // Cards scroll trigger animations
+  useLayoutEffect(() => {
+    if (loading) return;
+    if (cardsAnimatedRef.current) return;
+    if (hackathons.length === 0) return;
+    if (!cardsRef.current) return;
+
+    cardsAnimatedRef.current = true;
+
+    const ctx = gsap.context(() => {
+      const cards = gsap.utils.toArray<HTMLElement>(
+        ".hackathon-card",
+        cardsRef.current,
+      );
+
+      if (cards.length === 0) return;
+
+      gsap.from(cards, {
+        scrollTrigger: {
+          trigger: cardsRef.current,
+          start: "top 80%",
+          end: "bottom 20%",
+          once: true,
+        },
+        opacity: 0,
+        y: 60,
+        scale: 0.95,
+        rotationX: -5,
+        duration: 0.8,
+        stagger: {
+          amount: 0.6,
+          from: "start",
+        },
+        ease: "power3.out",
+      });
+    });
+
+    return () => ctx.revert();
+  }, [loading, hackathons]);
+
   return (
     <div className="relative min-h-screen bg-black text-white">
       <Glow />
       <Navbar />
 
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div
+          ref={headerRef}
+          className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+        >
           <div>
-            <Badge className="bg-white/5 text-white/80 ring-1 ring-white/10">
-              Browse
-            </Badge>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+            <div ref={badgeRef}>
+              <Badge className="bg-white/5 text-white/80 ring-1 ring-white/10">
+                Browse
+              </Badge>
+            </div>
+
+            <h1
+              ref={titleRef}
+              className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl"
+            >
               Hackathons
             </h1>
-            <p className="mt-3 max-w-2xl text-white/70">
-              Explore upcoming hackathons, view full details, and submit your project deck.
+
+            <p ref={descRef} className="mt-3 max-w-2xl text-white/70">
+              Explore upcoming hackathons.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 backdrop-blur-xl">
-            {HACKATHONS.length} events available
+          <div ref={statsRef} className="flex items-center gap-3">
+            <div className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 backdrop-blur-xl sm:block">
+              {hackathons.length} events available
+            </div>
+
+            <Button
+              onClick={() => router.push("/hackathons/create")}
+              variant="primary"
+              className="gap-2 font-bold"
+            >
+              <Plus className="size-4" />
+              Create Hackathon
+            </Button>
           </div>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {HACKATHONS.map((h) => (
-            <button
-              key={h.id}
-              type="button"
-              onClick={() => router.push(`/hackathons/${h.id}`)}
-              className="text-left"
-            >
-              <Card className="group h-full overflow-hidden transition hover:border-white/20 hover:bg-white/10">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 via-pink-500/10 to-blue-500/15" />
-                  <div className="relative h-44 w-full overflow-hidden bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-blue-600/20">
+        {/* LOADING STATE */}
+        {loading ? (
+          <p className="mt-10 text-center text-white/60">Loading...</p>
+        ) : hackathons.length === 0 ? (
+          <p className="mt-10 text-center text-white/60">
+            No hackathons available
+          </p>
+        ) : (
+          <div
+            ref={cardsRef}
+            className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {hackathons.map((h) => (
+              <button
+                key={h.id}
+                onClick={() => router.push(`/hackathons/${h.id}`)}
+                className="hackathon-card text-left"
+              >
+                <Card className="group h-full overflow-hidden transition hover:border-white/20 hover:bg-white/10">
+                  {/* IMAGE */}
+                  <div className="relative h-44 w-full overflow-hidden">
                     <img
-                      src={h.image}
+                      src={
+                        h.headerImage
+                          ? `http://localhost:5000/${h.headerImage.replace(/\\/g, "/")}`
+                          : "/placeholder.jpg"
+                      }
                       alt={h.title}
-                      className="h-full w-full object-cover opacity-80 transition duration-500 group-hover:opacity-100 group-hover:scale-[1.02]"
-                      loading="lazy"
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `
-                            <div class="flex h-full w-full items-center justify-center">
-                              <div class="flex flex-col items-center gap-2 text-white/40">
-                                <svg class="size-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                                <span class="text-xs">Image not available</span>
-                              </div>
-                            </div>
-                          `;
-                        }
-                      }}
+                      className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
                     />
                   </div>
-                </div>
 
-                <CardHeader className="space-y-2">
-                  <CardTitle className="text-white">{h.title}</CardTitle>
-                  <div className="flex items-center gap-2 text-xs text-white/60">
-                    <Calendar className="size-4" />
-                    <span>{h.date}</span>
-                  </div>
-                </CardHeader>
+                  <CardHeader>
+                    <CardTitle className="py-4">{h.title}</CardTitle>
+                    <div className="flex items-center gap-2 text-xs text-white/60">
+                      <Calendar className="size-4" />
+                      <span>
+                        {h.startDate} → {h.endDate}
+                      </span>
+                    </div>
+                  </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <p className="text-sm leading-6 text-white/70">{h.description}</p>
-
-                  <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-                    <span className="text-sm font-medium text-white/80">
-                      View details
-                    </span>
-                    <ChevronRight className="size-4 text-white/60 transition group-hover:translate-x-0.5 group-hover:text-white/80" />
-                  </div>
-                </CardContent>
-              </Card>
-            </button>
-          ))}
-        </div>
+                  <CardContent>
+                    <p className="text-sm text-white/70">
+                      {h.description.substring(0, 150) + "....."}
+                    </p>
+                  </CardContent>
+                </Card>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

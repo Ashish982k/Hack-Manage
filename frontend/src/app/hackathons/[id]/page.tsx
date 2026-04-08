@@ -14,15 +14,16 @@ import {
   Loader2,
   Sparkles,
   Users,
-  Video,
+  
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { FileUpload } from "@/components/file-upload";
-import { HACKATHONS } from "@/lib/hackathons";
+
+
+import { authClient } from "@/lib/auth-client";
 import { Navbar } from "@/components/navbar";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -30,16 +31,96 @@ gsap.registerPlugin(ScrollTrigger);
 type SubmissionStatus = "Not submitted" | "Submitted" | "Under review";
 
 type TeamMember = {
+  id: string;
+  userId: string;
+  status: "pending" | "approved";
   name: string;
-  role?: string;
+  role: "Leader" | "Member";
 };
 
 type TeamInfo = {
+  id: string;
   name: string;
+  leaderId: string;
   members: TeamMember[];
+  submission: {
+    id: string;
+    pptUrl: string | null;
+    githubUrl: string | null;
+    problemStatementId: string | null;
+    submittedAt: string;
+  } | null;
 };
 
-type HackathonStatus = "Open" | "Closed";
+
+
+type TeamStateResponse = {
+  joined: boolean;
+  team: {
+    id: string;
+    name: string;
+    leaderId: string;
+    members: Array<{
+      id: string;
+      userId: string;
+      status: "pending" | "approved";
+      user?: {
+        id: string;
+        name: string;
+      };
+    }>;
+    submission: {
+      id: string;
+      pptUrl: string | null;
+      githubUrl: string | null;
+      problemStatementId: string | null;
+      submittedAt: string;
+    } | null;
+  } | null;
+};
+
+type ApiMessageResponse = {
+  message?: string;
+};
+
+type ProblemStatement = {
+  id: string;
+  title: string;
+  body: string;
+};
+
+type HackathonApiResponse = {
+  id: string;
+  title: string;
+  description: string | null;
+  startDate: string;
+  endDate: string;
+  registrationDeadline: string;
+  createdBy: string;
+  headerImage: string | null;
+  location: string | null;
+  problemStatements?: ProblemStatement[];
+};
+
+type HackathonViewModel = HackathonApiResponse & {
+  shortDescription: string;
+  longDescription: string;
+  status: "Open" | "Closed";
+  submissionDeadline: string;
+  finalRoundDate: string;
+  tags: string[];
+  rules: string[];
+  problemStatements: ProblemStatement[];
+};
+
+const hasMessage = (value: unknown): value is ApiMessageResponse =>
+  typeof value === "object" && value !== null && "message" in value;
+
+const isTeamStateResponse = (value: unknown): value is TeamStateResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "joined" in value &&
+  typeof (value as { joined: unknown }).joined === "boolean";
 
 function formatTime(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -150,20 +231,24 @@ export default function HackathonDetailPage({
     message?: string;
   } | null>(null);
 
+  const { data: session, isPending: isSessionPending } =
+    authClient.useSession();
+
   const router = useRouter();
 
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
-  const [isJoined, setIsJoined] = React.useState(true);
+  const [isJoined, setIsJoined] = React.useState(false);
   const [team, setTeam] = React.useState<TeamInfo | null>(null);
   const [isLoadingTeam, setIsLoadingTeam] = React.useState(true);
 
-  const [file, setFile] = React.useState<File | null>(null);
+  const [driveUrl, setDriveUrl] = React.useState("");
   const [repo, setRepo] = React.useState("");
-  const [demo, setDemo] = React.useState("");
+  const [selectedProblemStatementId, setSelectedProblemStatementId] =
+    React.useState("");
 
-  const [submissionStatus, setSubmissionStatus] = React.useState<SubmissionStatus>(
-    "Not submitted"
-  );
+  const [submissionStatus, setSubmissionStatus] =
+    React.useState<SubmissionStatus>("Not submitted");
+  const [isEditing, setIsEditing] = React.useState(false);
   const [lastSubmitted, setLastSubmitted] = React.useState<{
     fileName: string;
     at: string;
@@ -171,95 +256,201 @@ export default function HackathonDetailPage({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const hackathonId = React.use(params).id;
+  const resetSubmissionState = React.useCallback(() => {
+    setDriveUrl("");
+    setRepo("");
+    setSelectedProblemStatementId("");
+    setSubmissionStatus("Not submitted");
+    setLastSubmitted(null);
+    setIsEditing(false);
+  }, []);
+
+  const fetchTeam = React.useCallback(async () => {
+    if (isSessionPending) {
+      return;
+    }
+
+    if (!session?.user?.id) {
+      setIsJoined(false);
+      setTeam(null);
+      resetSubmissionState();
+      setIsLoadingTeam(false);
+      return;
+    }
+
+    setIsLoadingTeam(true);
+    try {
+      const res = await fetch(
+        `http://localhost:5000/hackathons/${hackathonId}/team`,
+        {
+          credentials: "include",
+        },
+      );
+      const data: unknown = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        if (res.status !== 401 && res.status !== 403 && res.status !== 404) {
+          setToast({
+            kind: "error",
+            title: "Failed to load team",
+            message:
+              hasMessage(data) && data.message
+                ? data.message
+                : "Please refresh and try again.",
+          });
+        }
+        setIsJoined(false);
+        setTeam(null);
+        resetSubmissionState();
+        return;
+      }
+
+      if (!isTeamStateResponse(data)) {
+        setToast({
+          kind: "error",
+          title: "Failed to load team",
+          message: "Received an invalid response from the server.",
+        });
+        setIsJoined(false);
+        setTeam(null);
+        resetSubmissionState();
+        return;
+      }
+
+      setIsJoined(Boolean(data.joined));
+
+      const teamState = data.team;
+      if (!data.joined || !teamState) {
+        setTeam(null);
+        resetSubmissionState();
+        return;
+      }
+
+      const normalizedTeam: TeamInfo = {
+        id: teamState.id,
+        name: teamState.name,
+        leaderId: teamState.leaderId,
+        members: teamState.members.map((m) => ({
+          id: m.id,
+          userId: m.userId,
+          status: m.status,
+          name: m.user?.name || "Unknown Member",
+          role: m.userId === teamState.leaderId ? "Leader" : "Member",
+        })),
+        submission: teamState.submission,
+      };
+
+      setTeam(normalizedTeam);
+
+      if (normalizedTeam.submission) {
+        setDriveUrl(normalizedTeam.submission.pptUrl || "");
+        setRepo(normalizedTeam.submission.githubUrl || "");
+        setSelectedProblemStatementId(
+          normalizedTeam.submission.problemStatementId || "",
+        );
+        setSubmissionStatus("Submitted");
+        setLastSubmitted({
+          fileName: "Presentation URL",
+          at: normalizedTeam.submission.submittedAt,
+        });
+      } else {
+        resetSubmissionState();
+      }
+    } catch {
+      setToast({
+        kind: "error",
+        title: "Failed to load team",
+        message: "Please check your connection and try again.",
+      });
+      setTeam(null);
+      setIsJoined(false);
+      resetSubmissionState();
+    } finally {
+      setIsLoadingTeam(false);
+    }
+  }, [hackathonId, isSessionPending, resetSubmissionState, session?.user?.id]);
 
   React.useEffect(() => {
-    async function fetchTeam() {
-      setIsLoadingTeam(true);
+    if (isSessionPending) return;
+    fetchTeam();
+  }, [fetchTeam, isSessionPending]);
+
+  const [hackathon, setHackathon] = React.useState<HackathonViewModel | null>(
+    null,
+  );
+  const [isLoadingHackathon, setIsLoadingHackathon] = React.useState(true);
+
+  React.useEffect(() => {
+    async function fetchHackathon() {
+      setIsLoadingHackathon(true);
       try {
-        const res = await fetch(`http://localhost:5000/hackathons/${hackathonId}/team`, {
-          credentials: "include",
-        });
+        const res = await fetch(
+          `http://localhost:5000/hackathons/${hackathonId}`,
+          {
+            credentials: "include",
+          },
+        );
         if (res.ok) {
-          const data = await res.json();
-          // Adjust based on the actual backend response, e.g. mapping if needed. 
-          // For now, assuming exact match with TeamInfo `name` and `members`.
-          setTeam(data);
-        } else {
-          setTeam(null);
+          const found = (await res.json()) as HackathonApiResponse;
+          const description =
+            typeof found.description === "string" ? found.description : "";
+          setHackathon({
+            ...found,
+            shortDescription: description,
+            longDescription: description,
+            status: "Open",
+            submissionDeadline:
+              found.registrationDeadline || "2026-04-10T18:30:00.000Z",
+            finalRoundDate: found.endDate || "2026-04-12T09:00:00.000Z",
+            tags: ["AI", "Web", "DevTools", "Security"],
+            problemStatements: found.problemStatements ?? [],
+            rules: ["Follow the code of conduct"],
+          });
         }
       } catch (err) {
-        console.error("Failed to fetch team:", err);
-        setTeam(null);
+        console.error("Failed to fetch hackathon:", err);
       } finally {
-        setIsLoadingTeam(false);
+        setIsLoadingHackathon(false);
       }
     }
-    fetchTeam();
+    fetchHackathon();
   }, [hackathonId]);
 
-  const hackathon = React.useMemo(() => {
-    const found = HACKATHONS.find((h) => h.id === hackathonId);
-    if (!found) return null;
+  const problemStatements = hackathon?.problemStatements ?? [];
 
-    return {
-      ...found,
-      shortDescription: found.description,
-      longDescription:
-        found.description +
-        "\n\nBuild a product-grade workflow that feels effortless for students and scalable for colleges. Prioritize UX clarity, reliability, and security.",
-      status: "Open" as HackathonStatus,
-      startDate: "2026-04-01T10:00:00.000Z",
-      submissionDeadline: "2026-04-10T18:30:00.000Z",
-      finalRoundDate: "2026-04-12T09:00:00.000Z",
-      tags: ["AI", "Web", "DevTools", "Security"],
-      problemStatements: [
-        {
-          id: "ps-1",
-          title: "Smart Verification + Fraud Detection",
-          body: "Create a robust verification pipeline that prevents duplicate registrations and supports admin review with audit logs.",
-        },
-        {
-          id: "ps-2",
-          title: "QR Gate + Food Distribution Tracking",
-          body: "Design a scanning experience for entry and meals that is fast, secure, and works on multiple devices concurrently.",
-        },
-        {
-          id: "ps-3",
-          title: "Evaluation Console + Realtime Leaderboard",
-          body: "Build an evaluator-friendly scoring interface with rubric support and a public leaderboard updated in real time.",
-        },
-      ],
-    };
-  }, [hackathonId]);
+  React.useEffect(() => {
+    if (problemStatements.length === 1 && !selectedProblemStatementId) {
+      setSelectedProblemStatementId(problemStatements[0].id);
+    }
+  }, [problemStatements, selectedProblemStatementId]);
 
-  if (!hackathon) {
-    return (
-      <div className="relative min-h-screen bg-black text-white">
-        <PageGlow />
-        <Navbar />
-        <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-white">Hackathon not found</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <p className="text-sm text-white/70">
-                We couldn’t find a hackathon with id <span className="text-white">{hackathonId}</span>.
-              </p>
-              <Button variant="primary" onClick={() => (window.location.href = "/hackathons")}
-              >
-                Back to Hackathons
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const handleDeleteHackathon = async () => {
+    if (!confirm("Are you sure you want to delete this hackathon?")) return;
+    try {
+      const res = await fetch(
+        `http://localhost:5000/hackathons/${hackathonId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        },
+      );
+      if (res.ok) {
+        setToast({ kind: "success", title: "Deleted successfully" });
+        setTimeout(() => router.push("/hackathons"), 1000);
+      } else {
+        setToast({ kind: "error", title: "Failed to delete" });
+      }
+    } catch (err) {
+      setToast({ kind: "error", title: "Error deleting hackathon" });
+    }
+  };
 
   const deadlineMs = React.useMemo(
-    () => new Date(hackathon.submissionDeadline).getTime(),
-    [hackathon.submissionDeadline]
+    () =>
+      hackathon?.submissionDeadline
+        ? new Date(hackathon.submissionDeadline).getTime()
+        : 0,
+    [hackathon?.submissionDeadline],
   );
 
   const [now, setNow] = React.useState(() => Date.now());
@@ -268,15 +459,19 @@ export default function HackathonDetailPage({
     return () => window.clearInterval(t);
   }, []);
 
-  const timeLeft = React.useMemo(() => formatTime(deadlineMs - now), [deadlineMs, now]);
+  const timeLeft = React.useMemo(
+    () => formatTime(deadlineMs - now),
+    [deadlineMs, now],
+  );
   const isDeadlinePassed = now > deadlineMs;
 
+  const hasTeam = isJoined && !!team;
   const canSubmit =
-    isJoined &&
-    !!team &&
+    hasTeam &&
     !isDeadlinePassed &&
     submissionStatus !== "Under review" &&
-    !isSubmitting;
+    !isSubmitting &&
+    (problemStatements.length === 0 || !!selectedProblemStatementId);
 
   React.useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -293,15 +488,53 @@ export default function HackathonDetailPage({
             scrollTrigger: {
               trigger: el,
               start: "top 85%",
-              toggleActions: "play none none reverse",
+              once: true,
             },
-          }
+          },
         );
       });
     });
 
     return () => ctx.revert();
   }, []);
+
+  if (isLoadingHackathon) {
+    return (
+      <div className="relative min-h-screen bg-black text-white flex items-center justify-center">
+        <PageGlow />
+        <Navbar />
+        <Loader2 className="size-8 text-white/60 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!hackathon) {
+    return (
+      <div className="relative min-h-screen bg-black text-white">
+        <PageGlow />
+        <Navbar />
+        <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-white">Hackathon not found</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <p className="text-sm text-white/70">
+                We couldn’t find a hackathon with id{" "}
+                <span className="text-white">{hackathonId}</span>.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => (window.location.href = "/hackathons")}
+              >
+                Back to Hackathons
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     if (isDeadlinePassed) {
@@ -331,11 +564,11 @@ export default function HackathonDetailPage({
       return;
     }
 
-    if (!file) {
+    if (!driveUrl.trim()) {
       setToast({
         kind: "error",
-        title: "Upload required",
-        message: "Please upload a PPT/PDF file.",
+        title: "Required",
+        message: "Please provide a Drive URL for your presentation.",
       });
       return;
     }
@@ -343,19 +576,58 @@ export default function HackathonDetailPage({
     if (!repo.trim()) {
       setToast({
         kind: "error",
-        title: "Repo link required",
+        title: "Required",
         message: "Please provide a GitHub repository link.",
+      });
+      return;
+    }
+
+    if (problemStatements.length > 0 && !selectedProblemStatementId) {
+      setToast({
+        kind: "error",
+        title: "Required",
+        message: "Please select a problem statement before submitting.",
       });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await new Promise((r) => setTimeout(r, 1200));
-      const at = new Date().toISOString();
-      setLastSubmitted({ fileName: file.name, at });
+      const res = await fetch(
+        `http://localhost:5000/hackathons/${hackathonId}/uploads`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            driveUrl,
+            githubUrl: repo,
+            problemStatementId: selectedProblemStatementId,
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => null);
+        setToast({
+          kind: "error",
+          title: "Submission failed",
+          message: hasMessage(data) ? data.message || "Please try again." : "Please try again.",
+        });
+        return;
+      }
+
+      setLastSubmitted({
+        fileName: "Presentation URL",
+        at: new Date().toISOString(),
+      });
       setSubmissionStatus("Submitted");
-      setToast({ kind: "success", title: "Submission received", message: "Good luck!" });
+      setIsEditing(false);
+      setToast({
+        kind: "success",
+        title: "Submission received",
+        message: "Good luck!",
+      });
     } catch {
       setToast({
         kind: "error",
@@ -367,6 +639,87 @@ export default function HackathonDetailPage({
     }
   };
 
+  const handleJoin = async () => {
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+
+    
+    if (isJoined) {
+      try {
+        const res = await fetch(
+          `http://localhost:5000/hackathons/${hackathonId}/join`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          },
+        );
+
+        const data: unknown = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          setToast({
+            kind: "error",
+            title: hasMessage(data)
+              ? data.message || "Something went wrong"
+              : "Something went wrong",
+          });
+          return;
+        }
+
+        setToast({
+          kind: "success",
+          title: "Left the hackathon",
+        });
+
+        await fetchTeam();
+      } catch (err) {
+        setToast({
+          kind: "error",
+          title: "Action Failed",
+          message: "Some error occurred",
+        });
+      }
+      return;
+    }
+
+    
+    try {
+      const res = await fetch(
+        `http://localhost:5000/hackathons/${hackathonId}/join`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      const data: unknown = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setToast({
+          kind: "error",
+          title: hasMessage(data)
+            ? data.message || "Something went wrong"
+            : "Something went wrong",
+        });
+        return;
+      }
+
+      await fetchTeam();
+      setToast({
+        kind: "success",
+        title: "Joined hackathon",
+        message: "Create your team to start submitting.",
+      });
+    } catch (err) {
+      setToast({
+        kind: "error",
+        title: "Action Failed",
+        message: "Some error occurred",
+      });
+    }
+  };
   return (
     <div className="relative min-h-screen bg-black text-white">
       <PageGlow />
@@ -378,7 +731,9 @@ export default function HackathonDetailPage({
           <div className="space-y-8">
             <section data-reveal="up">
               <div className="flex flex-wrap items-center gap-3">
-                <ToneBadge tone={hackathon.status === "Open" ? "success" : "danger"}>
+                <ToneBadge
+                  tone={hackathon.status === "Open" ? "success" : "danger"}
+                >
                   {hackathon.status}
                 </ToneBadge>
                 <ToneBadge
@@ -395,13 +750,17 @@ export default function HackathonDetailPage({
                 <ToneBadge tone={isDeadlinePassed ? "danger" : "warning"}>
                   <span className="inline-flex items-center gap-2">
                     <Clock className="size-3.5" />
-                    Deadline: {new Date(hackathon.submissionDeadline).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    Deadline:{" "}
+                    {new Date(hackathon.submissionDeadline).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )}
                   </span>
                 </ToneBadge>
               </div>
@@ -410,11 +769,11 @@ export default function HackathonDetailPage({
                 {hackathon.title}
               </h1>
               <p className="mt-4 max-w-3xl text-base text-white/70 sm:text-lg">
-                {hackathon.shortDescription}
+                {hackathon.shortDescription.substring(0, 150) + "....."}
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
-                {hackathon.tags.map((t) => (
+                {hackathon.tags?.map((t: string) => (
                   <Badge
                     key={t}
                     className="bg-white/5 text-white/80 ring-1 ring-white/10 hover:bg-white/10 transition"
@@ -427,44 +786,58 @@ export default function HackathonDetailPage({
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Button
                   variant={isJoined ? "outline" : "primary"}
-                  onClick={() => {
-                    setIsJoined((v) => !v);
-                    setToast({
-                      kind: "success",
-                      title: !isJoined ? "Joined hackathon" : "Left hackathon",
-                    });
-                  }}
+                  onClick={handleJoin}
                 >
-                  {isJoined ? "Already Joined" : "Join Hackathon"}
+                  {isJoined ? "Leave Hackathon" : "Join Hackathon"}
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() =>
-                    setToast({ kind: "success", title: "Invite link copied", message: "(mock)" })
+                    setToast({
+                      kind: "success",
+                      title: "Invite link copied",
+                      message: "(mock)",
+                    })
                   }
                 >
                   Share
                 </Button>
+                {session?.user?.id &&
+                  hackathon.createdBy === session.user.id && (
+                    <Button
+                      variant="outline"
+                      onClick={handleDeleteHackathon}
+                      className="ml-auto text-red-500 border-red-500/50 hover:bg-red-500/10"
+                    >
+                      Delete Hackathon
+                    </Button>
+                  )}
               </div>
             </section>
 
             <section className="grid gap-6" data-reveal="up">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-white">Hackathon Details</CardTitle>
+                  <CardTitle className="text-white">
+                    Hackathon Details
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Description</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Description
+                    </p>
                     <p className="mt-2 text-sm leading-7 text-white/70">
                       {hackathon.longDescription}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Problem Statements</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Problem Statements
+                    </p>
                     <div className="mt-3 space-y-3">
-                      {hackathon.problemStatements.map((ps) => {
+                      {hackathon.problemStatements?.map((ps) => {
                         const isOpen = !!expanded[ps.id];
                         return (
                           <div
@@ -475,7 +848,10 @@ export default function HackathonDetailPage({
                               type="button"
                               className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
                               onClick={() =>
-                                setExpanded((s) => ({ ...s, [ps.id]: !s[ps.id] }))
+                                setExpanded((s) => ({
+                                  ...s,
+                                  [ps.id]: !s[ps.id],
+                                }))
                               }
                             >
                               <div className="flex min-w-0 items-center gap-3">
@@ -492,7 +868,11 @@ export default function HackathonDetailPage({
                             </button>
                             {isOpen ? (
                               <div className="px-4 pb-4">
-                                <p className="text-sm leading-7 text-white/70">{ps.body}</p>
+                                <p className="text-sm leading-7 text-white/70">
+                                  {ps.body && ps.body !== ps.title
+                                    ? ps.body
+                                    : "Use this statement when submitting your project."}
+                                </p>
                               </div>
                             ) : null}
                           </div>
@@ -502,9 +882,11 @@ export default function HackathonDetailPage({
                   </div>
 
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Rules & Guidelines</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Rules & Guidelines
+                    </p>
                     <ul className="mt-3 space-y-2 text-sm text-white/70">
-                      {hackathon.rules.map((r) => (
+                      {hackathon.rules?.map((r: string) => (
                         <li key={r} className="flex gap-2">
                           <span className="mt-2 size-1.5 shrink-0 rounded-full bg-white/30" />
                           <span>{r}</span>
@@ -514,24 +896,43 @@ export default function HackathonDetailPage({
                   </div>
 
                   <div>
-                    <p className="text-sm font-semibold text-white/90">Important Dates</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Important Dates
+                    </p>
                     <div className="mt-3 grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <p className="text-xs text-white/60">Start</p>
                         <p className="mt-2 text-sm font-semibold text-white/90">
-                          {new Date(hackathon.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(hackathon.startDate).toLocaleDateString(
+                            "en-US",
+                            { month: "short", day: "numeric", year: "numeric" },
+                          )}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs text-white/60">Submission Deadline</p>
+                        <p className="text-xs text-white/60">
+                          Submission Deadline
+                        </p>
                         <p className="mt-2 text-sm font-semibold text-white/90">
-                          {new Date(hackathon.submissionDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(
+                            hackathon.submissionDeadline,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <p className="text-xs text-white/60">Final Round</p>
                         <p className="mt-2 text-sm font-semibold text-white/90">
-                          {new Date(hackathon.finalRoundDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(
+                            hackathon.finalRoundDate,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
                         </p>
                       </div>
                     </div>
@@ -553,6 +954,22 @@ export default function HackathonDetailPage({
                         Loading team...
                       </span>
                     </div>
+                  ) : !isJoined ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-sm font-semibold text-white/90">
+                        You have not joined this hackathon
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">
+                        Join first, then create a team.
+                      </p>
+                      <Button
+                        className="mt-4"
+                        variant="primary"
+                        onClick={handleJoin}
+                      >
+                        Join Hackathon
+                      </Button>
+                    </div>
                   ) : team ? (
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -565,11 +982,7 @@ export default function HackathonDetailPage({
                         <Button
                           variant="outline"
                           onClick={() =>
-                            setToast({
-                              kind: "success",
-                              title: "Manage team",
-                              message: "(mock)",
-                            })
+                            router.push(`/hackathons/${hackathonId}/team`)
                           }
                         >
                           Manage
@@ -579,7 +992,7 @@ export default function HackathonDetailPage({
                       <div className="grid gap-3 sm:grid-cols-2">
                         {team.members.map((m) => (
                           <div
-                            key={m.name}
+                            key={m.id || m.name}
                             className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-4"
                           >
                             <div className="flex items-center gap-3">
@@ -591,7 +1004,7 @@ export default function HackathonDetailPage({
                                   {m.name}
                                 </p>
                                 <p className="text-xs text-white/60">
-                                  {m.role ?? "Member"}
+                                  {m.role}
                                 </p>
                               </div>
                             </div>
@@ -600,18 +1013,19 @@ export default function HackathonDetailPage({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white/90">
-                          No team yet
-                        </p>
-                        <p className="mt-1 text-sm text-white/60">
-                          Create or join a team to submit.
-                        </p>
-                      </div>
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-sm font-semibold text-white/90">
+                        No team yet
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">
+                        Create your team to start collaborating.
+                      </p>
                       <Button
+                        className="mt-4"
                         variant="primary"
-                        onClick={() => router.push(`/hackathons/${hackathonId}/create-team`)}
+                        onClick={() =>
+                          router.push(`/hackathons/${hackathonId}/create-team`)
+                        }
                       >
                         Create Team
                       </Button>
@@ -642,7 +1056,16 @@ export default function HackathonDetailPage({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  {!team && !isLoadingTeam ? (
+                  {!isJoined && !isLoadingTeam ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-sm font-semibold text-white/90">
+                        Join required
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">
+                        Join the hackathon to unlock submissions.
+                      </p>
+                    </div>
+                  ) : !hasTeam && !isLoadingTeam ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                       <p className="text-sm font-semibold text-white/90">
                         No team available
@@ -650,110 +1073,177 @@ export default function HackathonDetailPage({
                       <p className="mt-1 text-sm text-white/60">
                         Please create a team to unlock the submission form.
                       </p>
+                      <Button
+                        className="mt-4"
+                        variant="primary"
+                        onClick={() =>
+                          router.push(`/hackathons/${hackathonId}/create-team`)
+                        }
+                      >
+                        Create Team
+                      </Button>
                     </div>
                   ) : (
                     <>
                       <div className="grid gap-4 lg:grid-cols-2">
                         <div className="space-y-3">
-                      <p className="text-sm font-semibold text-white/90">
-                        Upload PPT/PDF
-                      </p>
-                      <FileUpload
-                        value={file}
-                        onChange={setFile}
-                        disabled={!canSubmit || submissionStatus === "Submitted"}
-                        accept=".pdf,.ppt,.pptx"
-                      />
-                    </div>
+                          <p className="text-sm font-semibold text-white/90">
+                            Presentation / Drive URL
+                          </p>
+                          <div className="mt-2 relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
+                              <Link className="size-4" />
+                            </span>
+                            <Input
+                              value={driveUrl}
+                              onChange={(e) => setDriveUrl(e.target.value)}
+                              placeholder="https://drive.google.com/..."
+                              className="pl-10"
+                              disabled={
+                                (!canSubmit ||
+                                  submissionStatus === "Submitted") &&
+                                !isEditing
+                              }
+                            />
+                          </div>
+                        </div>
 
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white/90">GitHub Repo</p>
-                        <div className="mt-2 relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
-                            <Link className="size-4" />
-                          </span>
-                          <Input
-                            value={repo}
-                            onChange={(e) => setRepo(e.target.value)}
-                            placeholder="https://github.com/your-team/project"
-                            className="pl-10"
-                            disabled={!canSubmit || submissionStatus === "Submitted"}
-                          />
+                        <div className="space-y-3">
+                          <p className="text-sm font-semibold text-white/90">
+                            GitHub Repo
+                          </p>
+                          <div className="mt-2 relative">
+                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
+                              <Link className="size-4" />
+                            </span>
+                            <Input
+                              value={repo}
+                              onChange={(e) => setRepo(e.target.value)}
+                              placeholder="https://github.com/your-team/project"
+                              className="pl-10"
+                              disabled={
+                                (!canSubmit ||
+                                  submissionStatus === "Submitted") &&
+                                !isEditing
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
 
-                      <div>
+                      <div className="space-y-3">
                         <p className="text-sm font-semibold text-white/90">
-                          Demo Video (optional)
+                          Problem Statement
+                          {problemStatements.length > 0 ? (
+                            <span className="text-purple-400"> *</span>
+                          ) : null}
                         </p>
-                        <div className="mt-2 relative">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
-                            <Video className="size-4" />
-                          </span>
-                          <Input
-                            value={demo}
-                            onChange={(e) => setDemo(e.target.value)}
-                            placeholder="https://youtu.be/..."
-                            className="pl-10"
-                            disabled={!canSubmit || submissionStatus === "Submitted"}
-                          />
-                        </div>
+                        {problemStatements.length > 0 ? (
+                          <select
+                            value={selectedProblemStatementId}
+                            onChange={(e) =>
+                              setSelectedProblemStatementId(e.target.value)
+                            }
+                            className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                            disabled={
+                              (!canSubmit ||
+                                submissionStatus === "Submitted") &&
+                              !isEditing
+                            }
+                          >
+                            <option value="">Select a problem statement</option>
+                            {problemStatements.map((ps) => (
+                              <option key={ps.id} value={ps.id}>
+                                {ps.title}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/50">
+                            No problem statements are available for this
+                            hackathon.
+                          </div>
+                        )}
                       </div>
 
                       {lastSubmitted ? (
                         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs text-white/60">Last submission</p>
+                          <p className="text-xs text-white/60">
+                            Last submission
+                          </p>
                           <p className="mt-2 text-sm font-semibold text-white/90">
                             {lastSubmitted.fileName}
                           </p>
                           <p className="mt-1 text-xs text-white/60">
-                            {new Date(lastSubmitted.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            {new Date(lastSubmitted.at).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </p>
                         </div>
                       ) : null}
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm text-white/60">
-                      {isDeadlinePassed
-                        ? "Submission is closed."
-                        : submissionStatus === "Submitted"
-                          ? "Your submission is saved."
-                          : "Make sure your deck explains the workflow, QR flow, and evaluation."}
-                    </div>
-                    <Button
-                      variant="primary"
-                      onClick={handleSubmit}
-                      disabled={!canSubmit || submissionStatus === "Submitted"}
-                    >
-                      {isSubmitting ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Loader2 className="size-4 animate-spin" />
-                          Submitting...
-                        </span>
-                      ) : submissionStatus === "Submitted" ? (
-                        <span className="inline-flex items-center gap-2">
-                          <CheckCircle2 className="size-4" />
-                          Submitted
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-2">
-                          <FileText className="size-4" />
-                          Submit
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                  </>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-sm text-white/60">
+                          {isDeadlinePassed
+                            ? "Submission is closed."
+                            : submissionStatus === "Submitted"
+                              ? "Your submission is saved."
+                              : "Make sure your deck explains the workflow, QR flow, and evaluation."}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {submissionStatus === "Submitted" && !isEditing && (
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsEditing(true)}
+                            >
+                              Update Submission
+                            </Button>
+                          )}
+                          {!(
+                            !isEditing && submissionStatus === "Submitted"
+                          ) && (
+                            <Button
+                              variant="primary"
+                              onClick={handleSubmit}
+                              disabled={
+                                (!canSubmit ||
+                                  submissionStatus === "Submitted") &&
+                                !isEditing
+                              }
+                            >
+                              {isSubmitting ? (
+                                <span className="inline-flex items-center gap-2">
+                                  <Loader2 className="size-4 animate-spin" />
+                                  Submitting...
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-2">
+                                  <FileText className="size-4" />
+                                  Submit
+                                </span>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
             </section>
           </div>
 
-          <aside className="space-y-6 lg:sticky lg:top-8 lg:h-fit" data-reveal="up">
+          <aside
+            className="space-y-6 lg:sticky lg:top-8 lg:h-fit"
+            data-reveal="up"
+          >
             <Card>
               <CardHeader>
                 <CardTitle className="text-white">Quick Info</CardTitle>
@@ -776,9 +1266,19 @@ export default function HackathonDetailPage({
                         <Calendar className="size-4 text-white/80" />
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-white/90">Deadline</p>
+                        <p className="text-sm font-semibold text-white/90">
+                          Deadline
+                        </p>
                         <p className="mt-1 text-xs text-white/60">
-                          {new Date(hackathon.submissionDeadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {new Date(
+                            hackathon.submissionDeadline,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
                       </div>
                     </div>
@@ -790,14 +1290,20 @@ export default function HackathonDetailPage({
                         <Users className="size-4 text-white/80" />
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-white/90">Team</p>
+                        <p className="text-sm font-semibold text-white/90">
+                          Team
+                        </p>
                         <p className="mt-1 text-xs text-white/60">
-                          {team ? `${team.members.length} members` : "Not created"}
+                          {!isJoined
+                            ? "Not joined"
+                            : team
+                              ? `${team.members.length} members`
+                              : "No team"}
                         </p>
                       </div>
                     </div>
                     <ToneBadge tone={team ? "success" : "warning"}>
-                      {team ? "Ready" : "Pending"}
+                      {team ? "Ready" : isJoined ? "Pending" : "Join"}
                     </ToneBadge>
                   </div>
 
@@ -807,7 +1313,9 @@ export default function HackathonDetailPage({
                         <FileText className="size-4 text-white/80" />
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-white/90">Submission</p>
+                        <p className="text-sm font-semibold text-white/90">
+                          Submission
+                        </p>
                         <p className="mt-1 text-xs text-white/60">
                           {submissionStatus}
                         </p>
@@ -836,7 +1344,9 @@ export default function HackathonDetailPage({
               <CardContent className="space-y-3">
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white/90">Step 1</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Step 1
+                    </p>
                     <ToneBadge tone={isJoined ? "success" : "warning"}>
                       {isJoined ? "Joined" : "Join"}
                     </ToneBadge>
@@ -848,7 +1358,9 @@ export default function HackathonDetailPage({
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white/90">Step 2</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Step 2
+                    </p>
                     <ToneBadge
                       tone={
                         submissionStatus === "Submitted"
@@ -858,7 +1370,9 @@ export default function HackathonDetailPage({
                             : "neutral"
                       }
                     >
-                      {submissionStatus === "Not submitted" ? "Submit" : submissionStatus}
+                      {submissionStatus === "Not submitted"
+                        ? "Submit"
+                        : submissionStatus}
                     </ToneBadge>
                   </div>
                   <p className="mt-2 text-sm text-white/60">
@@ -868,7 +1382,9 @@ export default function HackathonDetailPage({
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white/90">Step 3</p>
+                    <p className="text-sm font-semibold text-white/90">
+                      Step 3
+                    </p>
                     <ToneBadge tone={"neutral"}>Evaluation</ToneBadge>
                   </div>
                   <p className="mt-2 text-sm text-white/60">
@@ -892,12 +1408,12 @@ export default function HackathonDetailPage({
                       <ExternalLink className="size-4" />
                     </a>
                     <a
-                      href={demo || "#"}
+                      href={driveUrl || "#"}
                       className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 transition hover:bg-white/5"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Demo Video
+                      Presentation
                       <ExternalLink className="size-4" />
                     </a>
                   </div>

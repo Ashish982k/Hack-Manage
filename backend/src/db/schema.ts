@@ -1,5 +1,11 @@
 import { relations, sql } from "drizzle-orm";
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -135,15 +141,54 @@ export const hackathons = sqliteTable("hackathons", {
 
   title: text("title").notNull(),
   description: text("description"),
-
+  headerImage: text("header_url"),
   startDate: text("start_date"),
   endDate: text("end_date"),
+  registrationDeadline: text("registration_deadline"),
+  location: text("location"),
 
   createdBy: text("created_by")
     .notNull()
     .references(() => user.id),
 });
 
+export const hackathonParticipants = sqliteTable(
+  "hackathon_participants",
+  {
+    id: text("id").primaryKey(),
+    hackathonId: text("hackathon_id")
+      .notNull()
+      .references(() => hackathons.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    joinedAt: text("joined_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    index("hackathon_participants_hackathon_idx").on(table.hackathonId),
+    index("hackathon_participants_user_idx").on(table.userId),
+    uniqueIndex("hackathon_participants_hackathon_user_unique").on(
+      table.hackathonId,
+      table.userId,
+    ),
+  ],
+);
+
+export const stages = sqliteTable("stages", {
+  id: text("id").primaryKey(),
+
+  hackathonId: text("hackathon_id")
+    .notNull()
+    .references(() => hackathons.id),
+
+  title: text("title").notNull(),
+  description: text("description"),
+
+  startTime: text("start_time"),
+  endTime: text("end_time"),
+});
 /* ===================== PROBLEM STATEMENTS ===================== */
 export const problemStatements = sqliteTable("problem_statements", {
   id: text("id").primaryKey(),
@@ -221,7 +266,9 @@ export const submissions = sqliteTable("submissions", {
 
   pptUrl: text("ppt_url"),
   githubUrl: text("github_url"),
-  demoVideoUrl: text("demo_video_url"),
+  problemStatementId: text("problem_statement_id").references(
+    () => problemStatements.id,
+  ),
 
   submittedAt: text("submitted_at")
     .default(sql`CURRENT_TIMESTAMP`)

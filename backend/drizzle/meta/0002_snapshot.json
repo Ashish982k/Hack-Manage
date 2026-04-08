@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1421c3f7-7c08-44d1-b998-33039a31d232",
-  "prevId": "c18f6a15-25c2-414b-88c0-1730c83c38a8",
+  "id": "56d15cba-1313-4a2a-8a58-c949263a3dd8",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
       "name": "account",
@@ -301,6 +301,95 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "hackathon_participants": {
+      "name": "hackathon_participants",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hackathon_id": {
+          "name": "hackathon_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "joined_at": {
+          "name": "joined_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "hackathon_participants_hackathon_idx": {
+          "name": "hackathon_participants_hackathon_idx",
+          "columns": [
+            "hackathon_id"
+          ],
+          "isUnique": false
+        },
+        "hackathon_participants_user_idx": {
+          "name": "hackathon_participants_user_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "hackathon_participants_hackathon_user_unique": {
+          "name": "hackathon_participants_hackathon_user_unique",
+          "columns": [
+            "hackathon_id",
+            "user_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "hackathon_participants_hackathon_id_hackathons_id_fk": {
+          "name": "hackathon_participants_hackathon_id_hackathons_id_fk",
+          "tableFrom": "hackathon_participants",
+          "tableTo": "hackathons",
+          "columnsFrom": [
+            "hackathon_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "hackathon_participants_user_id_user_id_fk": {
+          "name": "hackathon_participants_user_id_user_id_fk",
+          "tableFrom": "hackathon_participants",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "hackathons": {
       "name": "hackathons",
       "columns": {
@@ -325,6 +414,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "header_url": {
+          "name": "header_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "start_date": {
           "name": "start_date",
           "type": "text",
@@ -334,6 +430,20 @@
         },
         "end_date": {
           "name": "end_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "registration_deadline": {
+          "name": "registration_deadline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "location": {
+          "name": "location",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -729,6 +839,72 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "stages": {
+      "name": "stages",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hackathon_id": {
+          "name": "hackathon_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "stages_hackathon_id_hackathons_id_fk": {
+          "name": "stages_hackathon_id_hackathons_id_fk",
+          "tableFrom": "stages",
+          "tableTo": "hackathons",
+          "columnsFrom": [
+            "hackathon_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "submissions": {
       "name": "submissions",
       "columns": {
@@ -767,8 +943,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "demo_video_url": {
-          "name": "demo_video_url",
+        "problem_statement_id": {
+          "name": "problem_statement_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -796,6 +972,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "submissions_problem_statement_id_problem_statements_id_fk": {
+          "name": "submissions_problem_statement_id_problem_statements_id_fk",
+          "tableFrom": "submissions",
+          "tableTo": "problem_statements",
+          "columnsFrom": [
+            "problem_statement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

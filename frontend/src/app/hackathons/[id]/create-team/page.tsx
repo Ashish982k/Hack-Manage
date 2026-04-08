@@ -30,11 +30,10 @@ export default function CreateTeamPage({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -43,38 +42,33 @@ export default function CreateTeamPage({
       return;
     }
 
-   
     const validMembers = [
       ...new Set(
         members.map((m) => m.trim()).filter((m) => m && isValidEmail(m)),
       ),
     ];
 
-    if (validMembers.length === 0) {
-      setError("Add at least one valid team member.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      
-      for (const email of validMembers) {
-        const res = await fetch(
-          `http://localhost:5000/users/check?email=${email}`,
-          { credentials: "include" },
-        );
+      // Only validate emails if members are provided
+      if (validMembers.length > 0) {
+        for (const email of validMembers) {
+          const res = await fetch(
+            `http://localhost:5000/users/check?email=${email}`,
+            { credentials: "include" },
+          );
 
-        const data = await res.json();
+          const data = await res.json();
 
-        if (!data.exists) {
-          setError(`User with email ${email} is not registered`);
-          setIsSubmitting(false);
-          return;
+          if (!data.exists) {
+            setError(`User with email ${email} is not registered or verified. Please ask them to sign up first.`);
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
 
-      
       const res = await fetch(`http://localhost:5000/teams`, {
         method: "POST",
         headers: {
@@ -167,17 +161,23 @@ export default function CreateTeamPage({
                   disabled={isSubmitting}
                   className="bg-black/20"
                 />
+                <p className="text-xs text-white/50">
+                  You will be assigned as the team leader
+                </p>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <label className="text-sm font-semibold text-white/90">
-                    Team Members (Emails)
+                    Team Members (Optional)
                   </label>
                   <span className="text-xs text-white/50">
                     {members.length}/5
                   </span>
                 </div>
+                <p className="text-xs text-white/50">
+                  Add team members by their registered email addresses
+                </p>
 
                 <div className="space-y-3">
                   {members.map((member, index) => (

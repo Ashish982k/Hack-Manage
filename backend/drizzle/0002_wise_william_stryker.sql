@@ -40,12 +40,27 @@ CREATE TABLE `evaluations` (
 	FOREIGN KEY (`judge_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `hackathon_participants` (
+	`id` text PRIMARY KEY NOT NULL,
+	`hackathon_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`joined_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `hackathon_participants_hackathon_idx` ON `hackathon_participants` (`hackathon_id`);--> statement-breakpoint
+CREATE INDEX `hackathon_participants_user_idx` ON `hackathon_participants` (`user_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `hackathon_participants_hackathon_user_unique` ON `hackathon_participants` (`hackathon_id`,`user_id`);--> statement-breakpoint
 CREATE TABLE `hackathons` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
+	`header_url` text,
 	`start_date` text,
 	`end_date` text,
+	`registration_deadline` text,
+	`location` text,
 	`created_by` text NOT NULL,
 	FOREIGN KEY (`created_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -102,21 +117,33 @@ CREATE TABLE `shortlisted_teams` (
 	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `stages` (
+	`id` text PRIMARY KEY NOT NULL,
+	`hackathon_id` text NOT NULL,
+	`title` text NOT NULL,
+	`description` text,
+	`start_time` text,
+	`end_time` text,
+	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `submissions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`round` integer NOT NULL,
 	`ppt_url` text,
 	`github_url` text,
-	`demo_video_url` text,
+	`problem_statement_id` text,
 	`submitted_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`problem_statement_id`) REFERENCES `problem_statements`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `team_members` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`user_id` text NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
 	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );

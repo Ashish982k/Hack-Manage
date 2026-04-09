@@ -74,7 +74,16 @@ export const account = sqliteTable(
   },
   (table) => [index("account_userId_idx").on(table.userId)],
 );
-
+export const hackathonRoles = sqliteTable("hackathonRoles", {
+  id: text("id").primaryKey().unique().notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  hackathonId: text("hackathon_id")
+    .notNull()
+    .references(() => hackathons.id, { onDelete: "cascade" }),
+  role: text("role"),
+});
 export const verification = sqliteTable(
   "verification",
   {

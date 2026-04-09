@@ -12,6 +12,7 @@ import {
   stages,
   teams,
   user,
+  hackathonRoles,
 } from "../src/db/schema";
 import type { Context } from "hono";
 import type { HonoEnv } from "../types";
@@ -55,7 +56,7 @@ const findMembershipForHackathon = async (
     with: { team: true },
   });
 
-  return memberships.find(m => m.team.hackathonId === hackathonId) || null;
+  return memberships.find((m) => m.team.hackathonId === hackathonId) || null;
 };
 
 const ensureParticipant = async (hackathonId: string, userId: string) => {
@@ -90,8 +91,7 @@ export const upload = async (c: AppContext) => {
     if (!driveUrl) return c.json({ message: "Drive URL is required" }, 400);
 
     const membership = await findMembershipForHackathon(user.id, hackathonId);
-    if (!membership)
-      return c.json({ message: "Not in a team" }, 400);
+    if (!membership) return c.json({ message: "Not in a team" }, 400);
 
     const teamId = membership.team.id;
 
@@ -114,7 +114,10 @@ export const upload = async (c: AppContext) => {
     };
 
     if (existing) {
-      await db.update(submissions).set(data).where(eq(submissions.id, existing.id));
+      await db
+        .update(submissions)
+        .set(data)
+        .where(eq(submissions.id, existing.id));
     } else {
       await db.insert(submissions).values({
         id: crypto.randomUUID(),
@@ -139,16 +142,32 @@ export const newHackathon = async (c: AppContext) => {
       !data.title ||
       !data.startDate ||
       !data.endDate ||
-      !data.registrationDeadline
+      !data.registrationDeadline ||
+      !data.admins ||
+      !data.judges
     ) {
       return c.json(
         {
           message:
-            "Title, start date, end date, and registration deadline are required",
+            "Title, start date, end date, registration deadline, admins and judges are required",
         },
         400,
       );
     }
+
+    let Admin = data.admins;
+    let Judge = data.judges;
+
+    let admins = [] as string[];
+    let judges = [] as string[];
+    if (typeof Admin === "string") {
+      admins = Admin.split(",");
+    }
+    if (typeof Judge === "string") {
+      judges = Judge.split(",");
+    }
+    admins = admins.map((e) => e.trim()).filter(Boolean);
+    judges = judges.map((e) => e.trim()).filter(Boolean);
 
     const safeTitle = (data.title as string)
       .toLowerCase()
@@ -159,8 +178,7 @@ export const newHackathon = async (c: AppContext) => {
 
     if (file) {
       const ext = file.name.split(".").pop();
-      const suffix = ext ? `.${ext}` : "";
-      const fileName = `${Date.now()}-${safeTitle}${suffix}`;
+      const fileName = `${Date.now()}-${safeTitle}${ext ? `.${ext}` : ""}`;
       filePath = path.join("images", fileName);
 
       await mkdir(path.dirname(filePath), { recursive: true });
@@ -169,6 +187,7 @@ export const newHackathon = async (c: AppContext) => {
     }
 
     const hackathonId = crypto.randomUUID();
+
     await db.insert(hackathons).values({
       id: hackathonId,
       title: data.title as string,
@@ -180,17 +199,44 @@ export const newHackathon = async (c: AppContext) => {
       location: data.location as string,
       createdBy: c.get("user").id as string,
     });
-    const parsedStages = JSON.parse((data.stages as string) || "[]") as Array<{
-      title: string;
-      description: string;
-      startDate: string;
-      endDate: string;
-    }>;
-    const parsedProblemStatements = JSON.parse(
-      (data.problemStatements as string) || "[]",
-    ) as ProblemStatementInput[];
 
-    for (const stage of parsedStages) {
+    for (const email of admins) {
+      const userData = await db.query.user.findFirst({
+        where: eq(user.email, email),
+      });
+
+      if (!userData) {
+        return c.json({ message: `Admin not found: ${email}` }, 400);
+      }
+
+      await db.insert(hackathonRoles).values({
+        id: crypto.randomUUID(),
+        userId: userData.id,
+        hackathonId,
+        role: "admin",
+      });
+    }
+
+    for (const email of judges) {
+      const userData = await db.query.user.findFirst({
+        where: eq(user.email, email),
+      });
+
+      if (!userData) {
+        return c.json({ message: `Judge not found: ${email}` }, 400);
+      }
+
+      await db.insert(hackathonRoles).values({
+        id: crypto.randomUUID(),
+        userId: userData.id,
+        hackathonId,
+        role: "judge",
+      });
+    }
+
+    const stagesData = JSON.parse((data.stages as string) || "[]");
+
+    for (const stage of stagesData) {
       await db.insert(stages).values({
         id: crypto.randomUUID(),
         hackathonId,
@@ -201,28 +247,26 @@ export const newHackathon = async (c: AppContext) => {
       });
     }
 
-    for (const statement of parsedProblemStatements) {
-      const normalizedStatement =
-        typeof statement === "string"
-          ? {
-              title: statement,
-              description: "",
-            }
-          : {
-              title: statement.title ?? "",
-              description: statement.description ?? statement.body ?? "",
-            };
+    const problems = JSON.parse((data.problemStatements as string) || "[]");
 
-      const trimmedTitle = normalizedStatement.title.trim();
-      const trimmedDescription = normalizedStatement.description.trim();
+    for (const p of problems) {
+      let title = "";
+      let description = "";
 
-      if (!trimmedTitle) continue;
+      if (typeof p === "string") {
+        title = p.trim();
+      } else {
+        title = (p.title ?? "").trim();
+        description = (p.description ?? p.body ?? "").trim();
+      }
+
+      if (!title) continue;
 
       await db.insert(problemStatements).values({
         id: crypto.randomUUID(),
         hackathonId,
-        title: trimmedTitle,
-        description: trimmedDescription || undefined,
+        title,
+        description: description || undefined,
       });
     }
 
@@ -235,7 +279,6 @@ export const newHackathon = async (c: AppContext) => {
     return c.json({ message: "Something went wrong" }, 500);
   }
 };
-
 export const getMember = async (c: AppContext) => {
   try {
     const hackathonId = c.req.param("id");
@@ -289,87 +332,18 @@ export const getMember = async (c: AppContext) => {
   }
 };
 
-export const createTeam = async (c: AppContext) => {
-  try {
-    const userId = c.get("user").id;
-    const { hackathonId, teamName, members = [] } = await c.req.json();
-
-    if (!hackathonId || !teamName) {
-      return c.json({ message: "Missing fields" }, 400);
-    }
-
-    const hackathon = await db.query.hackathons.findFirst({
-      where: eq(hackathons.id, hackathonId),
-    });
-    if (!hackathon) return c.json({ message: "Invalid hackathon" }, 400);
-
-    const participant = await ensureParticipant(hackathonId, userId);
-    if (!participant)
-      return c.json({ message: "Join hackathon first" }, 400);
-
-    const already = await findMembershipForHackathon(userId, hackathonId);
-    if (already)
-      return c.json({ message: "Already in a team" }, 400);
-
-    const teamId = crypto.randomUUID();
-
-    // create team
-    await db.insert(teams).values({
-      id: teamId,
-      hackathonId,
-      name: teamName,
-      leaderId: userId,
-    });
-
-    // add leader
-    await db.insert(teamMembers).values({
-      id: crypto.randomUUID(),
-      teamId,
-      userId,
-      status: "approved",
-    });
-
-    // add members
-    for (const email of members) {
-      const u = await db.query.user.findFirst({
-        where: eq(user.email, email),
-      });
-
-      if (!u || u.id === userId) continue;
-
-      const inTeam = await findMembershipForHackathon(u.id, hackathonId);
-      if (inTeam) continue;
-
-      await ensureParticipant(hackathonId, u.id);
-
-      await db.insert(teamMembers).values({
-        id: crypto.randomUUID(),
-        teamId,
-        userId: u.id,
-        status: "pending",
-      });
-    }
-
-    return c.json({ message: "Team created", teamId });
-  } catch {
-    return c.json({ message: "Something went wrong" }, 500);
-  }
-};
-
 export const joinHackathon = async (c: AppContext) => {
   try {
     const userId = c.get("user").id;
     const hackathonId = c.req.param("id");
 
-    if (!hackathonId)
-      return c.json({ message: "Hackathon not found" }, 404);
+    if (!hackathonId) return c.json({ message: "Hackathon not found" }, 404);
 
     const hackathon = await db.query.hackathons.findFirst({
       where: eq(hackathons.id, hackathonId),
     });
 
-    if (!hackathon)
-      return c.json({ message: "Hackathon not found" }, 404);
+    if (!hackathon) return c.json({ message: "Hackathon not found" }, 404);
 
     await ensureParticipant(hackathonId, userId);
 
@@ -384,8 +358,7 @@ export const deleteUser = async (c: AppContext) => {
     const hackathonId = c.req.param("id");
     const userId = c.get("user").id;
 
-    if (!hackathonId)
-      return c.json({ message: "Hackathon not found" }, 404);
+    if (!hackathonId) return c.json({ message: "Hackathon not found" }, 404);
 
     const participant = await db.query.hackathonParticipants.findFirst({
       where: and(
@@ -394,8 +367,7 @@ export const deleteUser = async (c: AppContext) => {
       ),
     });
 
-    if (!participant)
-      return c.json({ message: "Not joined" }, 404);
+    if (!participant) return c.json({ message: "Not joined" }, 404);
 
     const membership = await findMembershipForHackathon(userId, hackathonId);
 
@@ -407,7 +379,9 @@ export const deleteUser = async (c: AppContext) => {
       }
     }
 
-    await db.delete(hackathonParticipants).where(eq(hackathonParticipants.id, participant.id));
+    await db
+      .delete(hackathonParticipants)
+      .where(eq(hackathonParticipants.id, participant.id));
 
     return c.json({ message: "Left hackathon" });
   } catch {
@@ -415,181 +389,4 @@ export const deleteUser = async (c: AppContext) => {
   }
 };
 
-export const updateTeam = async (c: AppContext) => {
-  try {
-    const teamId = c.req.param("id");
-    const userId = c.get("user").id;
-    const { name } = await c.req.json();
 
-    if (!teamId) return c.json({ message: "Team not found" }, 404);
-    if (!name?.trim()) return c.json({ message: "Team name required" }, 400);
-
-    const team = await db.query.teams.findFirst({
-      where: eq(teams.id, teamId),
-    });
-
-    if (!team) return c.json({ message: "Team not found" }, 404);
-    if (team.leaderId !== userId)
-      return c.json({ message: "Only leader can rename" }, 403);
-
-    await db.update(teams).set({ name }).where(eq(teams.id, teamId));
-
-    return c.json({ message: "Updated", team: { ...team, name } });
-  } catch {
-    return c.json({ message: "Something went wrong" }, 500);
-  }
-};
-
-export const addTeamMember = async (c: AppContext) => {
-  try {
-    const teamId = c.req.param("teamId");
-    const userId = c.get("user").id;
-    const { email } = await c.req.json();
-
-    if (!teamId) return c.json({ message: "Team not found" }, 404);
-    if (!email) return c.json({ message: "Email required" }, 400);
-
-    const team = await db.query.teams.findFirst({
-      where: eq(teams.id, teamId),
-    });
-
-    if (!team) return c.json({ message: "Team not found" }, 404);
-    if (team.leaderId !== userId)
-      return c.json({ message: "Only leader can add members" }, 403);
-
-    const userToAdd = await db.query.user.findFirst({
-      where: eq(user.email, email),
-    });
-
-    if (!userToAdd)
-      return c.json({ message: "User not found" }, 400);
-
-    if (userToAdd.id === team.leaderId)
-      return c.json({ message: "Already leader" }, 409);
-
-    const exists = await db.query.teamMembers.findFirst({
-      where: and(
-        eq(teamMembers.teamId, teamId),
-        eq(teamMembers.userId, userToAdd.id),
-      ),
-    });
-
-    if (exists)
-      return c.json({ message: "Already in team" }, 409);
-
-    const inOtherTeam = await findMembershipForHackathon(
-      userToAdd.id,
-      team.hackathonId,
-    );
-
-    if (inOtherTeam)
-      return c.json({ message: "Already in another team" }, 409);
-
-    await ensureParticipant(team.hackathonId, userToAdd.id);
-
-    await db.insert(teamMembers).values({
-      id: crypto.randomUUID(),
-      teamId,
-      userId: userToAdd.id,
-      status: "pending",
-    });
-
-    return c.json({ message: "Invited" });
-  } catch {
-    return c.json({ message: "Something went wrong" }, 500);
-  }
-};
-
-export const removeTeamMember = async (c: AppContext) => {
-  try {
-    const teamId = c.req.param("teamId");
-    const targetUserId = c.req.param("userId");
-    const userId = c.get("user").id;
-
-    if (!teamId || !targetUserId)
-      return c.json({ message: "Not found" }, 404);
-
-    const team = await db.query.teams.findFirst({
-      where: eq(teams.id, teamId),
-    });
-
-    if (!team) return c.json({ message: "Team not found" }, 404);
-
-    const member = await db.query.teamMembers.findFirst({
-      where: and(
-        eq(teamMembers.teamId, teamId),
-        eq(teamMembers.userId, targetUserId),
-      ),
-    });
-
-    if (!member) return c.json({ message: "Member not found" }, 404);
-
-    const isLeader = team.leaderId === userId;
-    const isSelf = userId === targetUserId;
-
-    if (!isLeader && !isSelf)
-      return c.json({ message: "Unauthorized" }, 403);
-
-    if (targetUserId === team.leaderId)
-      return c.json({ message: "Cannot remove leader" }, 400);
-
-    await db.delete(teamMembers).where(eq(teamMembers.id, member.id));
-
-    return c.json({
-      message: isSelf ? "Left team" : "Removed member",
-    });
-  } catch {
-    return c.json({ message: "Something went wrong" }, 500);
-  }
-};
-
-export const updateTeamMember = async (c: AppContext) => {
-  try {
-    const teamId = c.req.param("teamId");
-    const targetUserId = c.req.param("userId");
-    const userId = c.get("user").id;
-    const { action } = await c.req.json();
-
-    if (!teamId || !targetUserId)
-      return c.json({ message: "Not found" }, 404);
-
-    if (!["approve", "reject"].includes(action))
-      return c.json({ message: "Invalid action" }, 400);
-
-    const team = await db.query.teams.findFirst({
-      where: eq(teams.id, teamId),
-    });
-
-    if (!team) return c.json({ message: "Team not found" }, 404);
-    if (team.leaderId !== userId)
-      return c.json({ message: "Only leader allowed" }, 403);
-
-    if (targetUserId === team.leaderId)
-      return c.json({ message: "Cannot modify leader" }, 400);
-
-    const member = await db.query.teamMembers.findFirst({
-      where: and(
-        eq(teamMembers.teamId, teamId),
-        eq(teamMembers.userId, targetUserId),
-      ),
-    });
-
-    if (!member) return c.json({ message: "Member not found" }, 404);
-    if (member.status !== "pending")
-      return c.json({ message: "Already processed" }, 409);
-
-    if (action === "approve") {
-      await db
-        .update(teamMembers)
-        .set({ status: "approved" })
-        .where(eq(teamMembers.id, member.id));
-
-      return c.json({ message: "Approved" });
-    }
-
-    await db.delete(teamMembers).where(eq(teamMembers.id, member.id));
-    return c.json({ message: "Rejected" });
-  } catch {
-    return c.json({ message: "Something went wrong" }, 500);
-  }
-};

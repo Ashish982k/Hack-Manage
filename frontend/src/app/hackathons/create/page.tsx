@@ -14,12 +14,16 @@ import {
   Layers,
   Sparkles,
   Image as ImageIcon,
+  Users,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
+import { MultiEmailInput } from "@/components/multi-email-input";
+import { authClient } from "@/lib/auth-client";
+import { normalizeEmail } from "@/lib/email-list";
 
 function PageGlow() {
   return (
@@ -50,6 +54,7 @@ interface ProblemStatement {
 
 export default function CreateHackathonPage() {
   const router = useRouter();
+  const { data: session } = authClient.useSession();
 
   // Basic Information
   const [title, setTitle] = useState("");
@@ -59,7 +64,9 @@ export default function CreateHackathonPage() {
   const [registrationDeadline, setRegistrationDeadline] = useState("");
   // Text Areas
   const [description, setDescription] = useState("");
-  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([
+  const [problemStatements, setProblemStatements] = useState<
+    ProblemStatement[]
+  >([
     {
       id: "1",
       title: "",
@@ -68,7 +75,8 @@ export default function CreateHackathonPage() {
   ]);
 
   const [headerImage, setHeaderImage] = useState<File | null>(null);
-
+  const [adminEmails, setAdminEmails] = useState<string[]>([]);
+  const [judgeEmails, setJudgeEmails] = useState<string[]>([]);
 
   const [stages, setStages] = useState<Stage[]>([
     {
@@ -144,6 +152,7 @@ export default function CreateHackathonPage() {
     e.preventDefault();
 
     const formData = new FormData();
+    const creatorEmail = normalizeEmail(session?.user?.email ?? "");
 
     formData.append("title", title);
     formData.append("location", location);
@@ -175,6 +184,16 @@ export default function CreateHackathonPage() {
     }));
 
     formData.append("stages", JSON.stringify(formattedStages));
+    const admins = Array.from(
+      new Set(
+        [...adminEmails.map(normalizeEmail), creatorEmail].filter(Boolean),
+      ),
+    );
+    formData.append("admins", JSON.stringify(admins));
+    const judges = Array.from(
+      new Set(judgeEmails.map(normalizeEmail).filter(Boolean)),
+    );
+    formData.append("judges", JSON.stringify(judges));
 
     try {
       const res = await fetch("http://localhost:5000/hackathons", {
@@ -354,7 +373,7 @@ export default function CreateHackathonPage() {
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="relative border-l border-white/10 ml-4 space-y-8 pb-4">
-                {stages.map((stage, index) => (
+                {stages.map((stage) => (
                   <div key={stage.id} className="relative pl-8">
                     {/* Timeline Node */}
                     <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-black ring-2 ring-white/10">
@@ -460,13 +479,47 @@ export default function CreateHackathonPage() {
             </CardContent>
           </Card>
 
-          {/* SECTION 3: HACKATHON INFORMATION */}
+          {/* SECTION 3: HACKATHON ACCESS / ROLES */}
+          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <Users className="size-5 text-emerald-400" />
+                <CardTitle className="text-xl font-semibold text-white">
+                  3. Hackathon Access / Roles
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-2">
+              <p className="text-sm text-white/60">
+                Add users who can help manage and evaluate this hackathon. Your
+                account is automatically included as an admin.
+              </p>
+
+              <MultiEmailInput
+                label="Admin Emails"
+                emails={adminEmails}
+                onChange={setAdminEmails}
+                placeholder="admin@example.com"
+                helperText="Press Enter, comma, or Tab to add each email."
+              />
+
+              <MultiEmailInput
+                label="Judge Emails"
+                emails={judgeEmails}
+                onChange={setJudgeEmails}
+                placeholder="judge@example.com"
+                helperText="Add one or more judge email IDs."
+              />
+            </CardContent>
+          </Card>
+
+          {/* SECTION 4: HACKATHON INFORMATION */}
           <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                 <FileText className="size-5 text-purple-400" />
                 <CardTitle className="text-xl font-semibold text-white">
-                  3. Problem Statements & Details
+                  4. Problem Statements & Details
                 </CardTitle>
               </div>
             </CardHeader>
@@ -487,7 +540,9 @@ export default function CreateHackathonPage() {
                         <Button
                           type="button"
                           variant="ghost"
-                          onClick={() => handleRemoveProblemStatement(statement.id)}
+                          onClick={() =>
+                            handleRemoveProblemStatement(statement.id)
+                          }
                           className="absolute right-3 top-3 px-2 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="size-4" />

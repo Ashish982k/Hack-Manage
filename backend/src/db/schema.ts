@@ -204,10 +204,17 @@ export const stages = sqliteTable("stages", {
 
   title: text("title").notNull(),
   description: text("description"),
+  type: text("type", {
+    enum: ["SUBMISSION", "EVALUATION", "FINAL"],
+  }).notNull(),
 
   startTime: text("start_time"),
   endTime: text("end_time"),
-});
+},
+(stages) => [
+  index("stage_hackathon_idx").on(stages.hackathonId),
+]);
+
 /* ===================== PROBLEM STATEMENTS ===================== */
 export const problemStatements = sqliteTable("problem_statements", {
   id: text("id").primaryKey(),
@@ -274,49 +281,70 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
   }),
 }));
 
-export const submissions = sqliteTable("submissions", {
-  id: text("id").primaryKey(),
+export const submissions = sqliteTable(
+  "submissions",
+  {
+    id: text("id").primaryKey(),
 
-  teamId: text("team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
 
-  round: integer("round").notNull(),
+    stageId: text("stage_id")
+      .notNull()
+      .references(() => stages.id),
+    
+    pptUrl: text("ppt_url"),
+    githubUrl: text("github_url"),
+    problemStatementId: text("problem_statement_id").references(
+      () => problemStatements.id,
+    ),
 
-  pptUrl: text("ppt_url"),
-  githubUrl: text("github_url"),
-  problemStatementId: text("problem_statement_id").references(
-    () => problemStatements.id,
-  ),
+    submittedAt: text("submitted_at")
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("unique_submission_team_stage").on(table.teamId, table.stageId),
+  ],
+);
 
-  submittedAt: text("submitted_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
+export const evaluations = sqliteTable(
+  "evaluations",
+  {
+    id: text("id").primaryKey(),
 
-export const evaluations = sqliteTable("evaluations", {
-  id: text("id").primaryKey(),
+    submissionId: text("submission_id")
+      .notNull()
+      .references(() => submissions.id, { onDelete: "cascade" }),
 
-  submissionId: text("submission_id")
-    .notNull()
-    .references(() => submissions.id, { onDelete: "cascade" }),
+    judgeId: text("judge_id")
+      .notNull()
+      .references(() => user.id,  { onDelete: "cascade" }),
 
-  judgeId: text("judge_id")
-    .notNull()
-    .references(() => user.id),
+    innovation: integer("innovation_score").notNull(),
+    feasibility: integer("feasibility_score").notNull(),
+    technical: integer("technical_score").notNull(),
+    presentation: integer("presentation_score").notNull(),
+    impact: integer("impact_score").notNull(),
 
-  innovation: integer("innovation_score").notNull(),
-  feasibility: integer("feasibility_score").notNull(),
-  technical: integer("technical_score").notNull(),
-  presentation: integer("presentation_score").notNull(),
-  impact: integer("impact_score").notNull(),
-
-  total: integer("total_score").notNull(),
-});
+    total: integer("total_score").notNull(),
+  },
+  (evaluations) => [
+    uniqueIndex("unique_judge_submission").on(
+      evaluations.submissionId,
+      evaluations.judgeId,
+    ),
+  ],
+);
 
 export const qrCodes = sqliteTable("qr_codes", {
   id: text("id").primaryKey(),
-
+  hackathonId: text("hackathon_id")
+    .notNull()
+    .references(() => hackathons.id, {
+      onDelete: "cascade",
+    }),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
@@ -363,7 +391,9 @@ export const shortlistedTeams = sqliteTable("shortlisted_teams", {
     .notNull()
     .references(() => hackathons.id, { onDelete: "cascade" }),
 
-  round: integer("round").notNull(),
+  stageId: text("stage_id")
+    .notNull()
+    .references(() => stages.id, { onDelete: "cascade" }),
 });
 
 /* ===================== CERTIFICATES ===================== */

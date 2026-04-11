@@ -1,11 +1,13 @@
 import crypto from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../src/db";
 import {
   hackathonParticipants,
+  hackathonRoles,
   teamMembers,
   teams,
   hackathons,
+  submissions,
   user,
 } from "../src/db/schema";
 import type { Context } from "hono";
@@ -44,6 +46,89 @@ const ensureParticipant = async (hackathonId: string, userId: string) => {
   await db.insert(hackathonParticipants).values(newParticipant);
 
   return newParticipant;
+};
+
+export const getTeamDetails = async (c: AppContext) => {
+  try {
+    const teamId = c.req.param("id");
+    const currentUser = c.get("user");
+
+    if (!teamId) return c.json({ message: "Team not found" }, 404);
+    if (!currentUser?.id) return c.json({ message: "Unauthorized" }, 401);
+
+    const team = await db.query.teams.findFirst({
+      where: eq(teams.id, teamId),
+    });
+
+    if (!team) return c.json({ message: "Team not found" }, 404);
+
+    const hackathon = await db.query.hackathons.findFirst({
+      where: eq(hackathons.id, team.hackathonId),
+    });
+
+    if (!hackathon) return c.json({ message: "Hackathon not found" }, 404);
+
+    const role = await db.query.hackathonRoles.findFirst({
+      where: and(
+        eq(hackathonRoles.hackathonId, team.hackathonId),
+        eq(hackathonRoles.userId, currentUser.id),
+      ),
+    });
+
+    const isCreator = hackathon.createdBy === currentUser.id;
+    const isJudgeOrAdmin = role?.role === "judge" || role?.role === "admin";
+    const isTeamMember = Boolean(
+      await db.query.teamMembers.findFirst({
+        where: and(
+          eq(teamMembers.teamId, teamId),
+          eq(teamMembers.userId, currentUser.id),
+        ),
+      }),
+    );
+
+    if (!isCreator && !isJudgeOrAdmin && !isTeamMember) {
+      return c.json({ message: "Unauthorized" }, 403);
+    }
+
+    const [members, latestSubmissionRows] = await Promise.all([
+      db.query.teamMembers.findMany({
+        where: eq(teamMembers.teamId, teamId),
+        with: { user: true },
+      }),
+      db
+        .select()
+        .from(submissions)
+        .where(eq(submissions.teamId, teamId))
+        .orderBy(desc(submissions.submittedAt))
+        .limit(1),
+    ]);
+
+    const latestSubmission = latestSubmissionRows[0] ?? null;
+
+    return c.json({
+      team: {
+        id: team.id,
+        name: team.name,
+        hackathonId: team.hackathonId,
+        leaderId: team.leaderId,
+        members: members.map((member) => ({
+          id: member.id,
+          userId: member.userId,
+          status: member.status,
+          user: member.user
+            ? {
+                id: member.user.id,
+                name: member.user.name,
+                email: member.user.email,
+              }
+            : null,
+        })),
+        submission: latestSubmission,
+      },
+    });
+  } catch {
+    return c.json({ message: "Something went wrong" }, 500);
+  }
 };
 
 export const updateTeam = async (c: AppContext) => {

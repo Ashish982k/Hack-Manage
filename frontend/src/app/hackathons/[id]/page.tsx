@@ -7,24 +7,33 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  ExternalLink,
   FileText,
   Flag,
   Link,
   Loader2,
+  Settings,
   Sparkles,
   Users,
-  
+  Gavel,
+  Trophy,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-
 import { authClient } from "@/lib/auth-client";
 import { Navbar } from "@/components/navbar";
+import {
+  deleteHackathon,
+  fetchHackathonById,
+  fetchHackathonRoles,
+  fetchHackathonTeamState,
+  fetchJudgeAccess as fetchHackathonJudgeAccess,
+  joinHackathon,
+  leaveHackathon,
+  uploadHackathonSubmission,
+} from "@/api";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,6 +58,7 @@ type TeamInfo = {
     githubUrl: string | null;
     problemStatementId: string | null;
     submittedAt: string;
+    evaluated?: boolean;
   } | null;
 };
 
@@ -75,12 +85,17 @@ type TeamStateResponse = {
       githubUrl: string | null;
       problemStatementId: string | null;
       submittedAt: string;
+      evaluated?: boolean;
     } | null;
   } | null;
 };
 
 type ApiMessageResponse = {
   message?: string;
+};
+
+type JudgeAccessResponse = {
+  isJudge: boolean;
 };
 
 type ProblemStatement = {
@@ -121,6 +136,12 @@ const isTeamStateResponse = (value: unknown): value is TeamStateResponse =>
   value !== null &&
   "joined" in value &&
   typeof (value as { joined: unknown }).joined === "boolean";
+
+const isJudgeAccessResponse = (value: unknown): value is JudgeAccessResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "isJudge" in value &&
+  typeof (value as { isJudge: unknown }).isJudge === "boolean";
 
 function formatTime(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -240,6 +261,8 @@ export default function HackathonDetailPage({
   const [isJoined, setIsJoined] = React.useState(false);
   const [team, setTeam] = React.useState<TeamInfo | null>(null);
   const [isLoadingTeam, setIsLoadingTeam] = React.useState(true);
+  const [canManageRoles, setCanManageRoles] = React.useState(false);
+  const [canJudge, setCanJudge] = React.useState(false);
 
   const [driveUrl, setDriveUrl] = React.useState("");
   const [repo, setRepo] = React.useState("");
@@ -248,6 +271,7 @@ export default function HackathonDetailPage({
 
   const [submissionStatus, setSubmissionStatus] =
     React.useState<SubmissionStatus>("Not submitted");
+  const [isSubmissionEvaluated, setIsSubmissionEvaluated] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [lastSubmitted, setLastSubmitted] = React.useState<{
     fileName: string;
@@ -261,6 +285,7 @@ export default function HackathonDetailPage({
     setRepo("");
     setSelectedProblemStatementId("");
     setSubmissionStatus("Not submitted");
+    setIsSubmissionEvaluated(false);
     setLastSubmitted(null);
     setIsEditing(false);
   }, []);
@@ -280,12 +305,7 @@ export default function HackathonDetailPage({
 
     setIsLoadingTeam(true);
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${hackathonId}/team`,
-        {
-          credentials: "include",
-        },
-      );
+      const res = await fetchHackathonTeamState(hackathonId);
       const data: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -349,6 +369,7 @@ export default function HackathonDetailPage({
           normalizedTeam.submission.problemStatementId || "",
         );
         setSubmissionStatus("Submitted");
+        setIsSubmissionEvaluated(Boolean(normalizedTeam.submission.evaluated));
         setLastSubmitted({
           fileName: "Presentation URL",
           at: normalizedTeam.submission.submittedAt,
@@ -375,6 +396,60 @@ export default function HackathonDetailPage({
     fetchTeam();
   }, [fetchTeam, isSessionPending]);
 
+  const fetchManageAccess = React.useCallback(async () => {
+    if (isSessionPending) return;
+
+    if (!session?.user?.id) {
+      setCanManageRoles(false);
+      return;
+    }
+
+    try {
+      const res = await fetchHackathonRoles(hackathonId);
+      setCanManageRoles(res.ok);
+    } catch {
+      setCanManageRoles(false);
+    }
+  }, [hackathonId, isSessionPending, session?.user?.id]);
+
+  React.useEffect(() => {
+    if (isSessionPending) return;
+    fetchManageAccess();
+  }, [fetchManageAccess, isSessionPending]);
+
+  const fetchJudgeAccess = React.useCallback(async () => {
+    if (isSessionPending) return;
+
+    if (!session?.user?.id) {
+      setCanJudge(false);
+      return;
+    }
+
+    try {
+      const res = await fetchHackathonJudgeAccess(hackathonId);
+
+      if (!res.ok) {
+        setCanJudge(false);
+        return;
+      }
+
+      const data: unknown = await res.json().catch(() => null);
+      if (!isJudgeAccessResponse(data)) {
+        setCanJudge(false);
+        return;
+      }
+
+      setCanJudge(data.isJudge);
+    } catch {
+      setCanJudge(false);
+    }
+  }, [hackathonId, isSessionPending, session?.user?.id]);
+
+  React.useEffect(() => {
+    if (isSessionPending) return;
+    fetchJudgeAccess();
+  }, [fetchJudgeAccess, isSessionPending]);
+
   const [hackathon, setHackathon] = React.useState<HackathonViewModel | null>(
     null,
   );
@@ -384,12 +459,7 @@ export default function HackathonDetailPage({
     async function fetchHackathon() {
       setIsLoadingHackathon(true);
       try {
-        const res = await fetch(
-          `http://localhost:5000/hackathons/${hackathonId}`,
-          {
-            credentials: "include",
-          },
-        );
+        const res = await fetchHackathonById(hackathonId);
         if (res.ok) {
           const found = (await res.json()) as HackathonApiResponse;
           const description =
@@ -416,7 +486,10 @@ export default function HackathonDetailPage({
     fetchHackathon();
   }, [hackathonId]);
 
-  const problemStatements = hackathon?.problemStatements ?? [];
+  const problemStatements = React.useMemo(
+    () => hackathon?.problemStatements ?? [],
+    [hackathon?.problemStatements],
+  );
 
   React.useEffect(() => {
     if (problemStatements.length === 1 && !selectedProblemStatementId) {
@@ -427,13 +500,7 @@ export default function HackathonDetailPage({
   const handleDeleteHackathon = async () => {
     if (!confirm("Are you sure you want to delete this hackathon?")) return;
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${hackathonId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
+      const res = await deleteHackathon(hackathonId);
       if (res.ok) {
         setToast({ kind: "success", title: "Deleted successfully" });
         setTimeout(() => router.push("/hackathons"), 1000);
@@ -464,6 +531,12 @@ export default function HackathonDetailPage({
     [deadlineMs, now],
   );
   const isDeadlinePassed = now > deadlineMs;
+
+  React.useEffect(() => {
+    if ((isDeadlinePassed || isSubmissionEvaluated) && isEditing) {
+      setIsEditing(false);
+    }
+  }, [isDeadlinePassed, isEditing, isSubmissionEvaluated]);
 
   const hasTeam = isJoined && !!team;
   const canSubmit =
@@ -546,6 +619,15 @@ export default function HackathonDetailPage({
       return;
     }
 
+    if (isSubmissionEvaluated) {
+      setToast({
+        kind: "error",
+        title: "Submission locked",
+        message: "Your submission has already been evaluated.",
+      });
+      return;
+    }
+
     if (!isJoined) {
       setToast({
         kind: "error",
@@ -593,19 +675,11 @@ export default function HackathonDetailPage({
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${hackathonId}/uploads`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            driveUrl,
-            githubUrl: repo,
-            problemStatementId: selectedProblemStatementId,
-          }),
-        },
-      );
+      const res = await uploadHackathonSubmission(hackathonId, {
+        driveUrl,
+        githubUrl: repo,
+        problemStatementId: selectedProblemStatementId,
+      });
 
       if (!res.ok) {
         const data: unknown = await res.json().catch(() => null);
@@ -622,7 +696,9 @@ export default function HackathonDetailPage({
         at: new Date().toISOString(),
       });
       setSubmissionStatus("Submitted");
+      setIsSubmissionEvaluated(false);
       setIsEditing(false);
+      await fetchTeam();
       setToast({
         kind: "success",
         title: "Submission received",
@@ -648,13 +724,7 @@ export default function HackathonDetailPage({
     
     if (isJoined) {
       try {
-        const res = await fetch(
-          `http://localhost:5000/hackathons/${hackathonId}/join`,
-          {
-            method: "DELETE",
-            credentials: "include",
-          },
-        );
+        const res = await leaveHackathon(hackathonId);
 
         const data: unknown = await res.json().catch(() => null);
 
@@ -686,13 +756,7 @@ export default function HackathonDetailPage({
 
     
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${hackathonId}/join`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      );
+      const res = await joinHackathon(hackathonId);
 
       const data: unknown = await res.json().catch(() => null);
 
@@ -747,6 +811,9 @@ export default function HackathonDetailPage({
                 >
                   {submissionStatus}
                 </ToneBadge>
+                {isSubmissionEvaluated ? (
+                  <ToneBadge tone="success">Evaluated</ToneBadge>
+                ) : null}
                 <ToneBadge tone={isDeadlinePassed ? "danger" : "warning"}>
                   <span className="inline-flex items-center gap-2">
                     <Clock className="size-3.5" />
@@ -791,6 +858,15 @@ export default function HackathonDetailPage({
                   {isJoined ? "Leave Hackathon" : "Join Hackathon"}
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => router.push(`/hackathons/${hackathonId}/leaderboard`)}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Trophy className="size-4 text-amber-300" />
+                    Leaderboard
+                  </span>
+                </Button>
+                <Button
                   variant="ghost"
                   onClick={() =>
                     setToast({
@@ -802,16 +878,37 @@ export default function HackathonDetailPage({
                 >
                   Share
                 </Button>
-                {session?.user?.id &&
-                  hackathon.createdBy === session.user.id && (
-                    <Button
-                      variant="outline"
-                      onClick={handleDeleteHackathon}
-                      className="ml-auto text-red-500 border-red-500/50 hover:bg-red-500/10"
-                    >
-                      Delete Hackathon
-                    </Button>
-                  )}
+                {canManageRoles && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/hackathons/${hackathonId}/manage`)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Settings className="size-4" />
+                      Manage Hackathon
+                    </span>
+                  </Button>
+                )}
+                {canJudge && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/hackathons/${hackathonId}/judge`)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Gavel className="size-4" />
+                      Judge Panel
+                    </span>
+                  </Button>
+                )}
+                {canManageRoles && (
+                  <Button
+                    variant="outline"
+                    onClick={handleDeleteHackathon}
+                    className="ml-auto text-red-500 border-red-500/50 hover:bg-red-500/10"
+                  >
+                    Delete Hackathon
+                  </Button>
+                )}
               </div>
             </section>
 
@@ -1100,9 +1197,11 @@ export default function HackathonDetailPage({
                               placeholder="https://drive.google.com/..."
                               className="pl-10"
                               disabled={
-                                (!canSubmit ||
+                                isDeadlinePassed ||
+                                isSubmissionEvaluated ||
+                                ((!canSubmit ||
                                   submissionStatus === "Submitted") &&
-                                !isEditing
+                                  !isEditing)
                               }
                             />
                           </div>
@@ -1122,9 +1221,11 @@ export default function HackathonDetailPage({
                               placeholder="https://github.com/your-team/project"
                               className="pl-10"
                               disabled={
-                                (!canSubmit ||
+                                isDeadlinePassed ||
+                                isSubmissionEvaluated ||
+                                ((!canSubmit ||
                                   submissionStatus === "Submitted") &&
-                                !isEditing
+                                  !isEditing)
                               }
                             />
                           </div>
@@ -1146,9 +1247,11 @@ export default function HackathonDetailPage({
                             }
                             className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                             disabled={
-                              (!canSubmit ||
+                              isDeadlinePassed ||
+                              isSubmissionEvaluated ||
+                              ((!canSubmit ||
                                 submissionStatus === "Submitted") &&
-                              !isEditing
+                                !isEditing)
                             }
                           >
                             <option value="">Select a problem statement</option>
@@ -1190,22 +1293,33 @@ export default function HackathonDetailPage({
                       ) : null}
 
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-sm text-white/60">
+                        <div
+                          className={
+                            isSubmissionEvaluated
+                              ? "text-sm text-emerald-300"
+                              : "text-sm text-white/60"
+                          }
+                        >
                           {isDeadlinePassed
                             ? "Submission is closed."
+                            : isSubmissionEvaluated
+                              ? "Your submission has been evaluated."
                             : submissionStatus === "Submitted"
                               ? "Your submission is saved."
                               : "Make sure your deck explains the workflow, QR flow, and evaluation."}
                         </div>
                         <div className="flex items-center gap-2">
-                          {submissionStatus === "Submitted" && !isEditing && (
+                          {submissionStatus === "Submitted" &&
+                            !isEditing &&
+                            !isDeadlinePassed &&
+                            !isSubmissionEvaluated && (
                             <Button
                               variant="outline"
                               onClick={() => setIsEditing(true)}
                             >
                               Update Submission
                             </Button>
-                          )}
+                            )}
                           {!(
                             !isEditing && submissionStatus === "Submitted"
                           ) && (
@@ -1213,9 +1327,11 @@ export default function HackathonDetailPage({
                               variant="primary"
                               onClick={handleSubmit}
                               disabled={
-                                (!canSubmit ||
+                                isDeadlinePassed ||
+                                isSubmissionEvaluated ||
+                                ((!canSubmit ||
                                   submissionStatus === "Submitted") &&
-                                !isEditing
+                                  !isEditing)
                               }
                             >
                               {isSubmitting ? (
@@ -1385,39 +1501,16 @@ export default function HackathonDetailPage({
                     <p className="text-sm font-semibold text-white/90">
                       Step 3
                     </p>
-                    <ToneBadge tone={"neutral"}>Evaluation</ToneBadge>
+                    <ToneBadge tone={isSubmissionEvaluated ? "success" : "neutral"}>
+                      {isSubmissionEvaluated ? "Evaluated" : "Evaluation"}
+                    </ToneBadge>
                   </div>
                   <p className="mt-2 text-sm text-white/60">
                     Track your results on leaderboard after review.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-white/90">Links</p>
-                    <span className="text-xs text-white/60">Mock</span>
-                  </div>
-                  <div className="mt-3 grid gap-2">
-                    <a
-                      href={repo || "#"}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 transition hover:bg-white/5"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      GitHub Repo
-                      <ExternalLink className="size-4" />
-                    </a>
-                    <a
-                      href={driveUrl || "#"}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 transition hover:bg-white/5"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Presentation
-                      <ExternalLink className="size-4" />
-                    </a>
-                  </div>
-                </div>
+                
               </CardContent>
             </Card>
           </aside>

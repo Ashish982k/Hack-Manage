@@ -24,6 +24,7 @@ import { Navbar } from "@/components/navbar";
 import { MultiEmailInput } from "@/components/multi-email-input";
 import { authClient } from "@/lib/auth-client";
 import { normalizeEmail } from "@/lib/email-list";
+import { createHackathon } from "@/api";
 
 function PageGlow() {
   return (
@@ -41,6 +42,7 @@ function PageGlow() {
 interface Stage {
   id: string;
   title: string;
+  type: "SUBMISSION" | "EVALUATION";
   startDate: string;
   endDate: string;
   description: string;
@@ -82,6 +84,7 @@ export default function CreateHackathonPage() {
     {
       id: "1",
       title: "Registration & Idea Submission",
+      type: "SUBMISSION",
       startDate: "",
       endDate: "",
       description: "",
@@ -94,6 +97,7 @@ export default function CreateHackathonPage() {
       {
         id: crypto.randomUUID(),
         title: "",
+        type: "SUBMISSION",
         startDate: "",
         endDate: "",
         description: "",
@@ -178,6 +182,7 @@ export default function CreateHackathonPage() {
 
     const formattedStages = stages.map((s) => ({
       title: s.title,
+      type: s.type,
       startDate: s.startDate,
       endDate: s.endDate,
       description: s.description,
@@ -196,11 +201,7 @@ export default function CreateHackathonPage() {
     formData.append("judges", JSON.stringify(judges));
 
     try {
-      const res = await fetch("http://localhost:5000/hackathons", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
+      const res = await createHackathon(formData);
 
       if (res.ok) {
         alert("Hackathon created successfully!");
@@ -405,6 +406,22 @@ export default function CreateHackathonPage() {
                             className="bg-black/20 border-white/10 text-white font-medium focus-visible:ring-pink-500/40 rounded-xl"
                             required
                           />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
+                            Stage Type
+                          </label>
+                          <select
+                            value={stage.type}
+                            onChange={(e) =>
+                              updateStage(stage.id, "type", e.target.value)
+                            }
+                            className="block w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+                          >
+                            <option value="SUBMISSION">Submission</option>
+                            <option value="EVALUATION">Evaluation</option>
+                          </select>
                         </div>
 
                         <div className="grid gap-4 sm:grid-cols-2">

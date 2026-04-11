@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
+import { checkUserByEmail, createTeam } from "@/api";
 
 function PageGlow() {
   return (
@@ -54,10 +55,7 @@ export default function CreateTeamPage({
       // Only validate emails if members are provided
       if (validMembers.length > 0) {
         for (const email of validMembers) {
-          const res = await fetch(
-            `http://localhost:5000/users/check?email=${email}`,
-            { credentials: "include" },
-          );
+          const res = await checkUserByEmail(email);
 
           const data = await res.json();
 
@@ -69,17 +67,10 @@ export default function CreateTeamPage({
         }
       }
 
-      const res = await fetch(`http://localhost:5000/teams`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          hackathonId,
-          teamName,
-          members: validMembers,
-        }),
+      const res = await createTeam({
+        hackathonId,
+        teamName,
+        members: validMembers,
       });
 
       if (res.ok) {

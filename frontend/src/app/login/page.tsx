@@ -32,15 +32,16 @@ export default function LoginPage() {
     return () => ctx.revert();
   }, []);
 
- const handleLogin = async (provider: "google" | "github") => {
-  await authClient.signIn.social({
-    provider,
-    callbackURL: "http://localhost:3000",
-    errorCallbackURL: "/login",
-    newUserCallbackURL: "/",
+  const handleLogin = async (provider: "google" | "github") => {
+    const appOrigin = window.location.origin;
 
-  })
- }
+    await authClient.signIn.social({
+      provider,
+      callbackURL: `${appOrigin}/`,
+      errorCallbackURL: `${appOrigin}/login`,
+      newUserCallbackURL: `${appOrigin}/`,
+    });
+  };
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center bg-black px-4">
@@ -104,8 +105,8 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-8 text-center" data-reveal>
-              <p className="text-gray-400">
-                Don't have an account?{" "}
+                <p className="text-gray-400">
+                  Don&apos;t have an account?{" "}
                 <a href="#" className="text-purple-400 transition-colors hover:text-purple-300">
                   Sign up
                 </a>

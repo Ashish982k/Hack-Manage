@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
+import { buildApiAssetUrl, fetchHackathonsList } from "@/api";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -39,9 +40,7 @@ export default function HackathonsPage() {
   const cardsAnimatedRef = useRef(false);
 
   useEffect(() => {
-    fetch("http://localhost:5000/hackathons", {
-      credentials: "include",
-    })
+    fetchHackathonsList()
       .then((res) => res.json())
       .then((data) => {
         setHackathons(data.hackathons || []);
@@ -211,7 +210,7 @@ export default function HackathonsPage() {
                     <img
                       src={
                         h.headerImage
-                          ? `http://localhost:5000/${h.headerImage.replace(/\\/g, "/")}`
+                          ? buildApiAssetUrl(h.headerImage)
                           : "/placeholder.jpg"
                       }
                       alt={h.title}

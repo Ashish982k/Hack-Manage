@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
+import { buildApiAssetUrl } from "@/api";
 
 function Glow() {
   return (
@@ -69,7 +70,7 @@ export default function HackathonsClient({ hackathons }: any) {
                 {/* IMAGE */}
                 <div className="relative h-44 w-full overflow-hidden">
                   <img
-                    src={`http://localhost:5000/images/${h.headerImg}`}
+                    src={buildApiAssetUrl(`images/${h.headerImg}`)}
                     alt={h.title}
                     className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
                   />

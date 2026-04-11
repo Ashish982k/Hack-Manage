@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import {
+  addTeamMember,
+  fetchHackathonTeamState,
+  removeTeamMember,
+  renameTeam,
+  reviewTeamMember,
+} from "@/api";
 
 type TeamMember = {
   id: string;
@@ -76,12 +83,7 @@ export default function TeamManagementPage({
     setIsLoading(true);
     setMessage(null);
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${hackathonId}/team`,
-        {
-          credentials: "include",
-        },
-      );
+      const res = await fetchHackathonTeamState(hackathonId);
       const data = (await res.json()) as TeamStateResponse;
       if (!res.ok) throw new Error("Unable to load team details");
 
@@ -133,12 +135,7 @@ export default function TeamManagementPage({
     setIsSavingName(true);
     setMessage(null);
     try {
-      const res = await fetch(`http://localhost:5000/teams/${team.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name }),
-      });
+      const res = await renameTeam(team.id, name);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setMessage({
@@ -172,12 +169,7 @@ export default function TeamManagementPage({
     setIsAddingMember(true);
     setMessage(null);
     try {
-      const res = await fetch(`http://localhost:5000/teams/${team.id}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email }),
-      });
+      const res = await addTeamMember(team.id, email);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setMessage({
@@ -208,15 +200,7 @@ export default function TeamManagementPage({
     setProcessingMemberId(memberUserId);
     setMessage(null);
     try {
-      const res = await fetch(
-        `http://localhost:5000/teams/${team.id}/members/${memberUserId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action }),
-        },
-      );
+      const res = await reviewTeamMember(team.id, memberUserId, action);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setMessage({
@@ -242,13 +226,7 @@ export default function TeamManagementPage({
     setProcessingMemberId(memberUserId);
     setMessage(null);
     try {
-      const res = await fetch(
-        `http://localhost:5000/teams/${team.id}/members/${memberUserId}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
+      const res = await removeTeamMember(team.id, memberUserId);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setMessage({

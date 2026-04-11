@@ -119,7 +119,7 @@ export default function PublicLeaderboardPage() {
       const res = await fetch(
         `http://localhost:5000/hackathons/${encodeURIComponent(
           hackathonId,
-        )}/leaderboard`,
+        )}/shortlisted`,
         {
           method: "GET",
           credentials: "include",

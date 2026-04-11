@@ -6,7 +6,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { deleteHackathon } from "../controllers/admins";
 import { upload, newHackathon, getMember, getHackathonRoles, getJudgeAccess, joinHackathon, updateHackathonRoles, deleteUser, } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
-import { evaluateSubmission, fetchEvaluatedTeams, getSubmissions } from "../controllers/judges";
+import { createShortlistedTeams, evaluateSubmission, fetchEvaluatedTeams, fetchShortlistedTeams, getSubmissions } from "../controllers/judges";
 const Hack = new Hono();
 Hack.use("*", authMiddleware);
 Hack.post("/:id/uploads", authMiddleware, upload);
@@ -58,7 +58,10 @@ Hack.get("/:id", authMiddleware, async (c) => {
 Hack.delete("/:id", authMiddleware, deleteHackathon);
 Hack.post("/:id/join", authMiddleware, joinHackathon);
 Hack.delete("/:id/join", authMiddleware, deleteUser);
+//judges of the hackathon
 Hack.get("/:id/submissions", authMiddleware, judgeMiddleware, getSubmissions);
 Hack.post("/:id/evaluate/:teamId", authMiddleware, judgeMiddleware, evaluateSubmission);
 Hack.get("/:id/leaderboard", authMiddleware, judgeMiddleware, fetchEvaluatedTeams);
+Hack.post("/:id/shortlist", authMiddleware, judgeMiddleware, createShortlistedTeams);
+Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
 export default Hack;

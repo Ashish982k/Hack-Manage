@@ -5,8 +5,9 @@ import {
   submissions,
   stages,
   evaluations,
+  shortlistedTeams,
 } from "../src/db/schema";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, isNotNull } from "drizzle-orm";
 import { db } from "../src/db";
 import type { Context } from "hono";
 
@@ -384,10 +385,40 @@ export const fetchEvaluatedTeams = async (c: Context) => {
   return c.json({ data: leaderboard });
 };
 
-export const fetchShortlistedTeams = async (c: Context) => {
+type StageType = "SUBMISSION" | "EVALUATION" | "FINAL";
+export async function getStage(
+  db: any,
+  hackathonId: string,
+  type: StageType
+) {
+  const activeStage = await db.query.stages.findFirst({
+    where: and(
+      eq(stages.hackathonId, hackathonId),
+      eq(stages.type, type),
+      isNotNull(stages.startTime),
+      isNotNull(stages.endTime),
+      sql`datetime(${stages.startTime}) <= datetime('now', 'localtime')`,
+      sql`datetime(${stages.endTime}) >= datetime('now', 'localtime')`
+    ),
+  });
+
+  if (activeStage) return activeStage;
+  const lastStage = await db.query.stages.findFirst({
+    where: and(
+      eq(stages.hackathonId, hackathonId),
+      eq(stages.type, type),
+      isNotNull(stages.endTime),
+      sql`datetime(${stages.endTime}) < datetime('now', 'localtime')`
+    ),
+    orderBy: [desc(sql`datetime(${stages.endTime})`)],
+  });
+
+  return lastStage ?? null;
+}
+export const createShortlistedTeams = async (c: Context) => {
   const { teamIds } = await c.req.json();
 
-  if(!Array.isArray(teamIds) || teamIds.some((id) => typeof id !== "string")) {
+  if (!Array.isArray(teamIds) || teamIds.some((id) => typeof id !== "string")) {
     return c.json({ message: "Invalid teamIds format" }, 400);
   }
   const userId = c.get("user")?.id;
@@ -395,4 +426,87 @@ export const fetchShortlistedTeams = async (c: Context) => {
   if (!userId) {
     return c.json({ message: "Unauthorized" }, 401);
   }
+
+  const hackathonId = c.req.param("id");
+  if (!hackathonId) {
+    return c.json({ message: "Hackathon ID is required" }, 400);
+  }
+
+  const isJudge = await db.query.hackathonRoles.findFirst({
+    where: and(
+      eq(hackathonRoles.hackathonId, hackathonId),
+      eq(hackathonRoles.userId, userId),
+      eq(hackathonRoles.role, "judge"),
+    ),
+  });
+
+  if (!isJudge) {
+    return c.json({ message: "Unauthorized judge" }, 403);
+  }
+
+  const evalStage = await getStage(db, hackathonId, "EVALUATION");
+
+  if (!evalStage) {
+    return c.json({ message: "No evaluation stage found" }, 400);
+  }
+
+  for (const tid of teamIds) {
+    const exists = await db.query.shortlistedTeams.findFirst({
+      where: and(
+        eq(shortlistedTeams.teamId, tid),
+        eq(shortlistedTeams.hackathonId, hackathonId),
+        eq(shortlistedTeams.stageId, evalStage.id),
+      ),
+    });
+    if (!exists) {
+      await db.insert(shortlistedTeams).values({
+        id: crypto.randomUUID(),
+        teamId: tid,
+        hackathonId,
+        stageId: evalStage.id,
+      });
+    }
+  }
+  return c.json({ message: "Teams shortlisted successfully" }, 200);
 };
+
+export const fetchShortlistedTeams = async (c: Context) => {
+  const hackathonId = c.req.param("id");
+  const userId = c.get("user")?.id;
+
+  if (!userId) {
+    return c.json({ message: "Unauthorized" }, 401);
+  }
+
+  if(!hackathonId) {
+    return c.json({ message: "Hackathon ID is required" }, 400);
+  }
+
+  const isJudge = await db.query.hackathonRoles.findFirst({
+    where: and(
+      eq(hackathonRoles.hackathonId, hackathonId),
+      eq(hackathonRoles.userId, userId),
+      eq(hackathonRoles.role, "judge"),
+    ),
+  });
+
+  if (!isJudge) {
+    return c.json({ message: "Unauthorized judge" }, 403);
+  }
+
+  const evalStage = await getStage(db, hackathonId, "EVALUATION");
+
+  if (!evalStage) {
+    return c.json({ message: "No evaluation stage found" }, 400);
+  }
+
+  const shortlisted = await db.query.shortlistedTeams.findMany({
+    where: and(
+      eq(shortlistedTeams.hackathonId, hackathonId),
+      eq(shortlistedTeams.stageId, evalStage.id),
+    )
+  });
+
+  return c.json(shortlisted);
+};
+

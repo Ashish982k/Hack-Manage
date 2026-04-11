@@ -122,9 +122,11 @@ export default function JudgeLeaderboardPage() {
   const [expandedRows, setExpandedRows] = React.useState<Record<string, boolean>>(
     {},
   );
-  const [confirmationNotice, setConfirmationNotice] = React.useState<
-    string | null
-  >(null);
+  const [isConfirmingShortlist, setIsConfirmingShortlist] = React.useState(false);
+  const [shortlistStatus, setShortlistStatus] = React.useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const sortedTeams = React.useMemo(() => sortByTotalScore(teams), [teams]);
 
@@ -150,7 +152,7 @@ export default function JudgeLeaderboardPage() {
     setError(null);
     setAccessDenied(false);
     setNoActiveStageMessage(null);
-    setConfirmationNotice(null);
+    setShortlistStatus(null);
 
     try {
       const res = await fetchHackathonLeaderboard(hackathonId);
@@ -208,7 +210,7 @@ export default function JudgeLeaderboardPage() {
   }, [isSessionPending, loadLeaderboard, router, session?.user?.id]);
 
   const handleQualifyCountChange = (value: string) => {
-    setConfirmationNotice(null);
+    setShortlistStatus(null);
 
     if (value === "") {
       setQualifyCountInput("");
@@ -224,13 +226,61 @@ export default function JudgeLeaderboardPage() {
     setExpandedRows((current) => ({ ...current, [teamId]: !current[teamId] }));
   };
 
-  const handleConfirmShortlist = () => {
-    setConfirmedShortlistSize(shortlistSize);
-    setConfirmationNotice(
-      shortlistSize > 0
-        ? `Shortlist confirmed for top ${shortlistSize} team${shortlistSize === 1 ? "" : "s"} (UI simulation).`
-        : "Shortlist cleared (UI simulation).",
-    );
+  const handleConfirmShortlist = async () => {
+    if (!hackathonId) {
+      setShortlistStatus({
+        kind: "error",
+        message: "Hackathon not found.",
+      });
+      return;
+    }
+
+    const shortlistedTeamIds = sortedTeams
+      .slice(0, shortlistSize)
+      .map((team) => team.teamId);
+
+    setIsConfirmingShortlist(true);
+    setShortlistStatus(null);
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/hackathons/${encodeURIComponent(hackathonId)}/shortlist`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ teamIds: shortlistedTeamIds }),
+        },
+      );
+
+      const data: unknown = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setShortlistStatus({
+          kind: "error",
+          message: readMessage(data) ?? "Failed to confirm shortlist.",
+        });
+        return;
+      }
+
+      setConfirmedShortlistSize(shortlistSize);
+      setShortlistStatus({
+        kind: "success",
+        message:
+          shortlistSize > 0
+            ? `Shortlist confirmed for top ${shortlistSize} team${shortlistSize === 1 ? "" : "s"}.`
+            : "Shortlist cleared successfully.",
+      });
+    } catch {
+      setShortlistStatus({
+        kind: "error",
+        message: "Please check your connection and try again.",
+      });
+    } finally {
+      setIsConfirmingShortlist(false);
+    }
   };
 
   return (
@@ -346,8 +396,19 @@ export default function JudgeLeaderboardPage() {
                       onChange={(e) => handleQualifyCountChange(e.target.value)}
                     />
                   </label>
-                  <Button variant="primary" onClick={handleConfirmShortlist}>
-                    Confirm Shortlist
+                  <Button
+                    variant="primary"
+                    onClick={handleConfirmShortlist}
+                    disabled={isConfirmingShortlist}
+                  >
+                    {isConfirmingShortlist ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" />
+                        Confirming...
+                      </span>
+                    ) : (
+                      "Confirm Shortlist"
+                    )}
                   </Button>
                 </div>
 
@@ -364,8 +425,16 @@ export default function JudgeLeaderboardPage() {
                   )}
                 </div>
 
-                {confirmationNotice ? (
-                  <p className="text-sm text-emerald-300">{confirmationNotice}</p>
+                {shortlistStatus ? (
+                  <p
+                    className={
+                      shortlistStatus.kind === "success"
+                        ? "text-sm text-emerald-300"
+                        : "text-sm text-rose-300"
+                    }
+                  >
+                    {shortlistStatus.message}
+                  </p>
                 ) : null}
               </CardContent>
             </Card>

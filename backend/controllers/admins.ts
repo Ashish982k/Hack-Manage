@@ -96,5 +96,5 @@ export const deleteHackathon = async (c: Context) => {
     console.error(err);
     return c.json({ message: "Something went wrong" }, 500);
   }
-}
+};
 

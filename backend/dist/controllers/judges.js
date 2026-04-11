@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import { hackathonRoles, teams, submissions, stages, evaluations, } from "../src/db/schema";
-import { eq, and, inArray, sql, desc } from "drizzle-orm";
+import { hackathonRoles, teams, submissions, stages, evaluations, shortlistedTeams, } from "../src/db/schema";
+import { eq, and, inArray, sql, desc, isNotNull } from "drizzle-orm";
 import { db } from "../src/db";
 const toTimestamp = (value) => {
     const timestamp = Date.parse(value ?? "");
@@ -184,41 +184,36 @@ export const evaluateSubmission = async (c) => {
 };
 export const fetchEvaluatedTeams = async (c) => {
     const hackathonId = c.req.param("id");
-    const userId = c.get("user").id;
+    const userId = c.get("user")?.id;
     if (!userId || !hackathonId) {
         return c.json({ message: "Missing required fields" }, 400);
     }
-    const activeEvaluationStage = await db.query.stages.findFirst({
+    // 1. Get active evaluation stage
+    const activeStage = await db.query.stages.findFirst({
         where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "EVALUATION"), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
     });
-    const [latestCompletedEvaluationStage] = activeEvaluationStage
-        ? [activeEvaluationStage]
-        : await db
-            .select()
-            .from(stages)
-            .where(and(eq(stages.hackathonId, hackathonId), eq(stages.type, "EVALUATION"), sql `datetime(${stages.endTime}) < datetime('now', 'localtime')`))
-            .orderBy(desc(sql `datetime(${stages.endTime})`))
-            .limit(1);
-    const leaderboardStage = activeEvaluationStage ?? latestCompletedEvaluationStage;
+    let leaderboardStage = activeStage;
+    if (!leaderboardStage) {
+        leaderboardStage = await db.query.stages.findFirst({
+            where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "EVALUATION"), sql `datetime(${stages.endTime}) < datetime('now', 'localtime')`),
+            orderBy: desc(sql `datetime(${stages.endTime})`),
+        });
+    }
     if (!leaderboardStage) {
         return c.json({ message: "No evaluation stage found" }, 400);
     }
     const submissionStages = await db.query.stages.findMany({
         where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "SUBMISSION")),
     });
-    if (submissionStages.length === 0) {
-        return c.json({ message: "No submission stage found for this hackathon." }, 400);
+    if (!submissionStages.length) {
+        return c.json({ message: "No submission stage found" }, 400);
     }
-    const evaluationStartTime = toTimestamp(leaderboardStage.startTime);
-    const candidatesBeforeEvaluation = submissionStages.filter((stage) => toTimestamp(stage.startTime) <= evaluationStartTime);
-    const candidateStages = candidatesBeforeEvaluation.length > 0
-        ? candidatesBeforeEvaluation
-        : submissionStages;
-    const leaderboardSubmissionStage = candidateStages.slice().sort((a, b) => {
-        const aEnd = toTimestamp(a.endTime ?? a.startTime);
-        const bEnd = toTimestamp(b.endTime ?? b.startTime);
-        return bEnd - aEnd;
-    })[0];
+    // 4. Pick relevant submission stage
+    const evalStart = toTimestamp(leaderboardStage.startTime);
+    const validStages = submissionStages.filter((s) => toTimestamp(s.startTime) <= evalStart);
+    const selectedStage = (validStages.length ? validStages : submissionStages).sort((a, b) => toTimestamp(b.endTime ?? b.startTime) -
+        toTimestamp(a.endTime ?? a.startTime))[0];
+    // 5. Build leaderboard
     const leaderboard = await db
         .select({
         teamId: teams.id,
@@ -234,10 +229,82 @@ export const fetchEvaluatedTeams = async (c) => {
         .from(submissions)
         .innerJoin(teams, eq(submissions.teamId, teams.id))
         .innerJoin(evaluations, eq(submissions.id, evaluations.submissionId))
-        .where(and(eq(submissions.stageId, leaderboardSubmissionStage.id), eq(teams.hackathonId, hackathonId)))
+        .where(and(eq(submissions.stageId, selectedStage.id), eq(teams.hackathonId, hackathonId)))
         .groupBy(teams.id)
         .orderBy(desc(sql `AVG(${evaluations.total})`));
-    return c.json({
-        data: leaderboard,
+    return c.json({ data: leaderboard });
+};
+export async function getStage(db, hackathonId, type) {
+    const activeStage = await db.query.stages.findFirst({
+        where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, type), isNotNull(stages.startTime), isNotNull(stages.endTime), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
     });
+    if (activeStage)
+        return activeStage;
+    const lastStage = await db.query.stages.findFirst({
+        where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, type), isNotNull(stages.endTime), sql `datetime(${stages.endTime}) < datetime('now', 'localtime')`),
+        orderBy: [desc(sql `datetime(${stages.endTime})`)],
+    });
+    return lastStage ?? null;
+}
+export const createShortlistedTeams = async (c) => {
+    const { teamIds } = await c.req.json();
+    if (!Array.isArray(teamIds) || teamIds.some((id) => typeof id !== "string")) {
+        return c.json({ message: "Invalid teamIds format" }, 400);
+    }
+    const userId = c.get("user")?.id;
+    if (!userId) {
+        return c.json({ message: "Unauthorized" }, 401);
+    }
+    const hackathonId = c.req.param("id");
+    if (!hackathonId) {
+        return c.json({ message: "Hackathon ID is required" }, 400);
+    }
+    const isJudge = await db.query.hackathonRoles.findFirst({
+        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "judge")),
+    });
+    if (!isJudge) {
+        return c.json({ message: "Unauthorized judge" }, 403);
+    }
+    const evalStage = await getStage(db, hackathonId, "EVALUATION");
+    if (!evalStage) {
+        return c.json({ message: "No evaluation stage found" }, 400);
+    }
+    for (const tid of teamIds) {
+        const exists = await db.query.shortlistedTeams.findFirst({
+            where: and(eq(shortlistedTeams.teamId, tid), eq(shortlistedTeams.hackathonId, hackathonId), eq(shortlistedTeams.stageId, evalStage.id)),
+        });
+        if (!exists) {
+            await db.insert(shortlistedTeams).values({
+                id: crypto.randomUUID(),
+                teamId: tid,
+                hackathonId,
+                stageId: evalStage.id,
+            });
+        }
+    }
+    return c.json({ message: "Teams shortlisted successfully" }, 200);
+};
+export const fetchShortlistedTeams = async (c) => {
+    const hackathonId = c.req.param("id");
+    const userId = c.get("user")?.id;
+    if (!userId) {
+        return c.json({ message: "Unauthorized" }, 401);
+    }
+    if (!hackathonId) {
+        return c.json({ message: "Hackathon ID is required" }, 400);
+    }
+    const isJudge = await db.query.hackathonRoles.findFirst({
+        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "judge")),
+    });
+    if (!isJudge) {
+        return c.json({ message: "Unauthorized judge" }, 403);
+    }
+    const evalStage = await getStage(db, hackathonId, "EVALUATION");
+    if (!evalStage) {
+        return c.json({ message: "No evaluation stage found" }, 400);
+    }
+    const shortlisted = await db.query.shortlistedTeams.findMany({
+        where: and(eq(shortlistedTeams.hackathonId, hackathonId), eq(shortlistedTeams.stageId, evalStage.id))
+    });
+    return c.json(shortlisted);
 };

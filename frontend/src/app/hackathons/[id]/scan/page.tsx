@@ -15,6 +15,7 @@ import { Navbar } from "@/components/navbar";
 import { QrScannerCard } from "@/components/qr/qr-scanner-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { fetchJudgeAccess, scanHackathonQr } from "@/api";
 
@@ -154,6 +155,8 @@ export default function HackathonScanPage() {
   const [scanState, setScanState] = React.useState<ScanState>("scanning");
   const [feedback, setFeedback] = React.useState<string | null>(null);
   const [qrType, setQrType] = React.useState<string | null>(null);
+  const [manualToken, setManualToken] = React.useState("");
+  const [manualInputError, setManualInputError] = React.useState<string | null>(null);
   const [facingMode, setFacingMode] = React.useState<"user" | "environment">(
     "environment",
   );
@@ -212,6 +215,12 @@ export default function HackathonScanPage() {
 
     void verifyAccess();
   }, [hackathonId, isSessionPending, router, session?.user?.id]);
+
+  React.useEffect(() => {
+    if (scanState !== "success") return;
+    setManualToken("");
+    setManualInputError(null);
+  }, [scanState]);
 
   const handleScan = React.useCallback(
     async (rawValue: string) => {
@@ -306,6 +315,22 @@ export default function HackathonScanPage() {
     if (!mode) return;
     setFacingMode((prev) => (prev === mode ? prev : mode));
   };
+
+  const handleManualSubmit = React.useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      const token = manualToken.trim();
+      if (!token) {
+        setManualInputError("Please enter a token");
+        return;
+      }
+
+      setManualInputError(null);
+      await handleScan(token);
+    },
+    [handleScan, manualToken],
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -418,6 +443,40 @@ export default function HackathonScanPage() {
                 </CardContent>
               </Card>
             )}
+
+            <Card className="border-white/10 bg-black/20">
+              <CardHeader>
+                <CardTitle className="text-base text-white">Or enter token manually</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <form
+                  onSubmit={handleManualSubmit}
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center"
+                >
+                  <Input
+                    value={manualToken}
+                    onChange={(event) => {
+                      setManualToken(event.target.value);
+                      if (manualInputError) setManualInputError(null);
+                    }}
+                    placeholder="Enter QR token"
+                    className="w-full border-white/15 bg-black/40 text-white placeholder:text-white/40"
+                    disabled={isSubmitting || !isScannerActive}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full sm:w-auto"
+                    disabled={isSubmitting || !isScannerActive}
+                  >
+                    Submit
+                  </Button>
+                </form>
+
+                {manualInputError ? (
+                  <p className="text-sm text-rose-300">{manualInputError}</p>
+                ) : null}
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

@@ -34,6 +34,14 @@ type TeamDetailsResponse = {
       githubUrl: string | null;
       problemStatementId: string | null;
       submittedAt: string;
+      previousScores?: {
+        innovation: number;
+        feasibility: number;
+        technical: number;
+        presentation: number;
+        impact: number;
+        total: number;
+      } | null;
     } | null;
   };
 };
@@ -130,6 +138,19 @@ export default function EvaluateTeamPage({
         }
 
         setTeam(data.team);
+        if (data.team.submission?.previousScores) {
+          setScores({
+            innovation: String(data.team.submission.previousScores.innovation),
+            feasibility: String(data.team.submission.previousScores.feasibility),
+            technical: String(data.team.submission.previousScores.technical),
+            presentation: String(data.team.submission.previousScores.presentation),
+            impact: String(data.team.submission.previousScores.impact),
+          });
+          setSubmitStatus({
+            kind: "success",
+            message: "Showing your previous evaluation scores.",
+          });
+        }
       } catch {
         setError("Please check your connection and try again.");
       } finally {

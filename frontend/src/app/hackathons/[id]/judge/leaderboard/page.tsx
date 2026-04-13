@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { fetchHackathonLeaderboard } from "@/api";
+import { confirmHackathonShortlist, fetchHackathonLeaderboard } from "@/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -243,17 +243,9 @@ export default function JudgeLeaderboardPage() {
     setShortlistStatus(null);
 
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${encodeURIComponent(hackathonId)}/shortlist`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ teamIds: shortlistedTeamIds }),
-        },
-      );
+      const res = await confirmHackathonShortlist(hackathonId, {
+        teamIds: shortlistedTeamIds,
+      });
 
       const data: unknown = await res.json().catch(() => null);
 

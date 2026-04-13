@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Calendar, ChevronRight, Plus } from "lucide-react";
+import { Calendar,  Plus } from "lucide-react";
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,18 @@ import { Navbar } from "@/components/navbar";
 import { buildApiAssetUrl, fetchHackathonsList } from "@/api";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import Image from "next/image";
 
 gsap.registerPlugin(ScrollTrigger);
+
+interface Hackathon {
+  id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  headerImage?: string;
+}
 
 function Glow() {
   return (
@@ -26,7 +36,7 @@ function Glow() {
 export default function HackathonsPage() {
   const router = useRouter();
 
-  const [hackathons, setHackathons] = useState<any[]>([]);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
 
   const headerRef = useRef<HTMLDivElement>(null);
@@ -207,14 +217,16 @@ export default function HackathonsPage() {
                 <Card className="group h-full overflow-hidden transition hover:border-white/20 hover:bg-white/10">
                   {/* IMAGE */}
                   <div className="relative h-44 w-full overflow-hidden">
-                    <img
+                    <Image
                       src={
                         h.headerImage
                           ? buildApiAssetUrl(h.headerImage)
                           : "/placeholder.jpg"
                       }
                       alt={h.title}
-                      className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
+                      fill
+                      className="object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   </div>
 

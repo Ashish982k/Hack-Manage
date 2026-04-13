@@ -6,11 +6,15 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   FileText,
   Flag,
   Link,
   Loader2,
+  QrCode,
+  ScanLine,
   Settings,
   Sparkles,
   Users,
@@ -28,6 +32,7 @@ import {
   deleteHackathon,
   fetchHackathonById,
   fetchHackathonRoles,
+  fetchHackathonShortlistedTeams,
   fetchHackathonTeamState,
   fetchJudgeAccess as fetchHackathonJudgeAccess,
   joinHackathon,
@@ -59,10 +64,17 @@ type TeamInfo = {
     problemStatementId: string | null;
     submittedAt: string;
     evaluated?: boolean;
+    scoreBreakdown?: {
+      technical: number;
+      feasibility: number;
+      innovation: number;
+      presentation: number;
+      impact: number;
+      totalScore: number;
+      evaluationCount: number;
+    } | null;
   } | null;
 };
-
-
 
 type TeamStateResponse = {
   joined: boolean;
@@ -86,6 +98,15 @@ type TeamStateResponse = {
       problemStatementId: string | null;
       submittedAt: string;
       evaluated?: boolean;
+      scoreBreakdown?: {
+        technical: number;
+        feasibility: number;
+        innovation: number;
+        presentation: number;
+        impact: number;
+        totalScore: number;
+        evaluationCount: number;
+      } | null;
     } | null;
   } | null;
 };
@@ -96,6 +117,13 @@ type ApiMessageResponse = {
 
 type JudgeAccessResponse = {
   isJudge: boolean;
+  isAdmin?: boolean;
+};
+
+type ShortlistedTeamsResponse = {
+  data?: Array<{
+    teamId?: string;
+  }>;
 };
 
 type ProblemStatement = {
@@ -143,6 +171,23 @@ const isJudgeAccessResponse = (value: unknown): value is JudgeAccessResponse =>
   "isJudge" in value &&
   typeof (value as { isJudge: unknown }).isJudge === "boolean";
 
+const readShortlistedTeamIds = (value: unknown) => {
+  if (typeof value !== "object" || value === null) {
+    return new Set<string>();
+  }
+
+  const rows = (value as ShortlistedTeamsResponse).data;
+  if (!Array.isArray(rows)) {
+    return new Set<string>();
+  }
+
+  return new Set(
+    rows
+      .map((item) => (typeof item?.teamId === "string" ? item.teamId : ""))
+      .filter(Boolean),
+  );
+};
+
 function formatTime(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
   const d = Math.floor(total / (3600 * 24));
@@ -151,6 +196,9 @@ function formatTime(ms: number) {
   const s = total % 60;
   return { d, h, m, s };
 }
+
+const formatScore = (value: number) =>
+  Number.isInteger(value) ? String(value) : value.toFixed(2);
 
 function ToneBadge({
   tone,
@@ -263,6 +311,8 @@ export default function HackathonDetailPage({
   const [isLoadingTeam, setIsLoadingTeam] = React.useState(true);
   const [canManageRoles, setCanManageRoles] = React.useState(false);
   const [canJudge, setCanJudge] = React.useState(false);
+  const [isHackathonAdmin, setIsHackathonAdmin] = React.useState(false);
+  const [canViewQrCodes, setCanViewQrCodes] = React.useState(false);
 
   const [driveUrl, setDriveUrl] = React.useState("");
   const [repo, setRepo] = React.useState("");
@@ -271,12 +321,14 @@ export default function HackathonDetailPage({
 
   const [submissionStatus, setSubmissionStatus] =
     React.useState<SubmissionStatus>("Not submitted");
-  const [isSubmissionEvaluated, setIsSubmissionEvaluated] = React.useState(false);
+  const [isSubmissionEvaluated, setIsSubmissionEvaluated] =
+    React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [lastSubmitted, setLastSubmitted] = React.useState<{
     fileName: string;
     at: string;
   } | null>(null);
+  const [showScoreBreakdown, setShowScoreBreakdown] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const hackathonId = React.use(params).id;
@@ -287,6 +339,7 @@ export default function HackathonDetailPage({
     setSubmissionStatus("Not submitted");
     setIsSubmissionEvaluated(false);
     setLastSubmitted(null);
+    setShowScoreBreakdown(false);
     setIsEditing(false);
   }, []);
 
@@ -374,6 +427,7 @@ export default function HackathonDetailPage({
           fileName: "Presentation URL",
           at: normalizedTeam.submission.submittedAt,
         });
+        setShowScoreBreakdown(false);
       } else {
         resetSubmissionState();
       }
@@ -395,6 +449,41 @@ export default function HackathonDetailPage({
     if (isSessionPending) return;
     fetchTeam();
   }, [fetchTeam, isSessionPending]);
+
+  const fetchQrAccess = React.useCallback(async () => {
+    if (isSessionPending || isLoadingTeam) return;
+
+    if (!session?.user?.id || !isJoined || !team?.id) {
+      setCanViewQrCodes(false);
+      return;
+    }
+
+    try {
+      const res = await fetchHackathonShortlistedTeams(hackathonId);
+      if (!res.ok) {
+        setCanViewQrCodes(false);
+        return;
+      }
+
+      const data: unknown = await res.json().catch(() => null);
+      const shortlistedTeamIds = readShortlistedTeamIds(data);
+      setCanViewQrCodes(shortlistedTeamIds.has(team.id));
+    } catch {
+      setCanViewQrCodes(false);
+    }
+  }, [
+    hackathonId,
+    isJoined,
+    isLoadingTeam,
+    isSessionPending,
+    session?.user?.id,
+    team?.id,
+  ]);
+
+  React.useEffect(() => {
+    if (isSessionPending) return;
+    fetchQrAccess();
+  }, [fetchQrAccess, isSessionPending]);
 
   const fetchManageAccess = React.useCallback(async () => {
     if (isSessionPending) return;
@@ -422,6 +511,7 @@ export default function HackathonDetailPage({
 
     if (!session?.user?.id) {
       setCanJudge(false);
+      setIsHackathonAdmin(false);
       return;
     }
 
@@ -430,18 +520,23 @@ export default function HackathonDetailPage({
 
       if (!res.ok) {
         setCanJudge(false);
+        setIsHackathonAdmin(false);
         return;
       }
 
       const data: unknown = await res.json().catch(() => null);
       if (!isJudgeAccessResponse(data)) {
         setCanJudge(false);
+        setIsHackathonAdmin(false);
         return;
       }
 
-      setCanJudge(data.isJudge);
+      const access = data as JudgeAccessResponse;
+      setCanJudge(access.isJudge);
+      setIsHackathonAdmin(Boolean(access.isAdmin));
     } catch {
       setCanJudge(false);
+      setIsHackathonAdmin(false);
     }
   }, [hackathonId, isSessionPending, session?.user?.id]);
 
@@ -533,18 +628,16 @@ export default function HackathonDetailPage({
   const isDeadlinePassed = now > deadlineMs;
 
   React.useEffect(() => {
-    if ((isDeadlinePassed || isSubmissionEvaluated) && isEditing) {
+    if (isSubmissionEvaluated && isEditing) {
       setIsEditing(false);
     }
-  }, [isDeadlinePassed, isEditing, isSubmissionEvaluated]);
+  }, [isEditing, isSubmissionEvaluated]);
 
   const hasTeam = isJoined && !!team;
+  const isSubmissionLocked = submissionStatus === "Submitted" && !isEditing;
+  const submissionScoreBreakdown = team?.submission?.scoreBreakdown ?? null;
   const canSubmit =
-    hasTeam &&
-    !isDeadlinePassed &&
-    submissionStatus !== "Under review" &&
-    !isSubmitting &&
-    (problemStatements.length === 0 || !!selectedProblemStatementId);
+    hasTeam && submissionStatus !== "Under review" && !isSubmitting;
 
   React.useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -610,15 +703,6 @@ export default function HackathonDetailPage({
   }
 
   const handleSubmit = async () => {
-    if (isDeadlinePassed) {
-      setToast({
-        kind: "error",
-        title: "Submission closed",
-        message: "The submission deadline has passed.",
-      });
-      return;
-    }
-
     if (isSubmissionEvaluated) {
       setToast({
         kind: "error",
@@ -655,15 +739,6 @@ export default function HackathonDetailPage({
       return;
     }
 
-    if (!repo.trim()) {
-      setToast({
-        kind: "error",
-        title: "Required",
-        message: "Please provide a GitHub repository link.",
-      });
-      return;
-    }
-
     if (problemStatements.length > 0 && !selectedProblemStatementId) {
       setToast({
         kind: "error",
@@ -686,7 +761,9 @@ export default function HackathonDetailPage({
         setToast({
           kind: "error",
           title: "Submission failed",
-          message: hasMessage(data) ? data.message || "Please try again." : "Please try again.",
+          message: hasMessage(data)
+            ? data.message || "Please try again."
+            : "Please try again.",
         });
         return;
       }
@@ -721,7 +798,15 @@ export default function HackathonDetailPage({
       return;
     }
 
-    
+    if (!isJoined && isHackathonAdmin) {
+      setToast({
+        kind: "error",
+        title: "Not allowed",
+        message: "Hackathon admins cannot participate as contestants.",
+      });
+      return;
+    }
+
     if (isJoined) {
       try {
         const res = await leaveHackathon(hackathonId);
@@ -754,7 +839,6 @@ export default function HackathonDetailPage({
       return;
     }
 
-    
     try {
       const res = await joinHackathon(hackathonId);
 
@@ -851,21 +935,36 @@ export default function HackathonDetailPage({
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Button
-                  variant={isJoined ? "outline" : "primary"}
-                  onClick={handleJoin}
-                >
-                  {isJoined ? "Leave Hackathon" : "Join Hackathon"}
-                </Button>
+                {!canJudge && !isHackathonAdmin ? (
+                  <Button
+                    variant={isJoined ? "outline" : "primary"}
+                    onClick={handleJoin}
+                  >
+                    {isJoined ? "Leave Hackathon" : "Join Hackathon"}
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
-                  onClick={() => router.push(`/hackathons/${hackathonId}/leaderboard`)}
+                  onClick={() =>
+                    router.push(`/hackathons/${hackathonId}/leaderboard`)
+                  }
                 >
                   <span className="inline-flex items-center gap-2">
                     <Trophy className="size-4 text-amber-300" />
                     Leaderboard
                   </span>
                 </Button>
+                {canViewQrCodes && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/hackathons/${hackathonId}/qr`)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <QrCode className="size-4 text-emerald-300" />
+                      View QR Codes
+                    </span>
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   onClick={() =>
@@ -881,7 +980,9 @@ export default function HackathonDetailPage({
                 {canManageRoles && (
                   <Button
                     variant="outline"
-                    onClick={() => router.push(`/hackathons/${hackathonId}/manage`)}
+                    onClick={() =>
+                      router.push(`/hackathons/${hackathonId}/manage`)
+                    }
                   >
                     <span className="inline-flex items-center gap-2">
                       <Settings className="size-4" />
@@ -892,11 +993,24 @@ export default function HackathonDetailPage({
                 {canJudge && (
                   <Button
                     variant="outline"
-                    onClick={() => router.push(`/hackathons/${hackathonId}/judge`)}
+                    onClick={() =>
+                      router.push(`/hackathons/${hackathonId}/judge`)
+                    }
                   >
                     <span className="inline-flex items-center gap-2">
                       <Gavel className="size-4" />
                       Judge Panel
+                    </span>
+                  </Button>
+                )}
+                {(isHackathonAdmin || canJudge) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/hackathons/${hackathonId}/scan`)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <ScanLine className="size-4 text-cyan-300" />
+                      Scan QR
                     </span>
                   </Button>
                 )}
@@ -1051,6 +1165,15 @@ export default function HackathonDetailPage({
                         Loading team...
                       </span>
                     </div>
+                  ) : isHackathonAdmin ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-sm font-semibold text-white/90">
+                        Admin participation is restricted
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">
+                        Hackathon admins cannot join teams for this event.
+                      </p>
+                    </div>
                   ) : !isJoined ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                       <p className="text-sm font-semibold text-white/90">
@@ -1143,17 +1266,24 @@ export default function HackathonDetailPage({
                           ? "success"
                           : submissionStatus === "Under review"
                             ? "warning"
-                            : isDeadlinePassed
-                              ? "danger"
-                              : "neutral"
+                            : "neutral"
                       }
                     >
-                      {isDeadlinePassed ? "Deadline passed" : submissionStatus}
+                      {submissionStatus}
                     </ToneBadge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  {!isJoined && !isLoadingTeam ? (
+                  {isHackathonAdmin ? (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <p className="text-sm font-semibold text-white/90">
+                        Submission unavailable
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">
+                        Hackathon admins cannot submit as participants.
+                      </p>
+                    </div>
+                  ) : !isJoined && !isLoadingTeam ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                       <p className="text-sm font-semibold text-white/90">
                         Join required
@@ -1197,11 +1327,9 @@ export default function HackathonDetailPage({
                               placeholder="https://drive.google.com/..."
                               className="pl-10"
                               disabled={
-                                isDeadlinePassed ||
                                 isSubmissionEvaluated ||
-                                ((!canSubmit ||
-                                  submissionStatus === "Submitted") &&
-                                  !isEditing)
+                                isSubmissionLocked ||
+                                !canSubmit
                               }
                             />
                           </div>
@@ -1221,11 +1349,9 @@ export default function HackathonDetailPage({
                               placeholder="https://github.com/your-team/project"
                               className="pl-10"
                               disabled={
-                                isDeadlinePassed ||
                                 isSubmissionEvaluated ||
-                                ((!canSubmit ||
-                                  submissionStatus === "Submitted") &&
-                                  !isEditing)
+                                isSubmissionLocked ||
+                                !canSubmit
                               }
                             />
                           </div>
@@ -1247,11 +1373,9 @@ export default function HackathonDetailPage({
                             }
                             className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                             disabled={
-                              isDeadlinePassed ||
                               isSubmissionEvaluated ||
-                              ((!canSubmit ||
-                                submissionStatus === "Submitted") &&
-                                !isEditing)
+                              isSubmissionLocked ||
+                              !canSubmit
                             }
                           >
                             <option value="">Select a problem statement</option>
@@ -1300,10 +1424,8 @@ export default function HackathonDetailPage({
                               : "text-sm text-white/60"
                           }
                         >
-                          {isDeadlinePassed
-                            ? "Submission is closed."
-                            : isSubmissionEvaluated
-                              ? "Your submission has been evaluated."
+                          {isSubmissionEvaluated
+                            ? "Your submission has been evaluated."
                             : submissionStatus === "Submitted"
                               ? "Your submission is saved."
                               : "Make sure your deck explains the workflow, QR flow, and evaluation."}
@@ -1311,14 +1433,13 @@ export default function HackathonDetailPage({
                         <div className="flex items-center gap-2">
                           {submissionStatus === "Submitted" &&
                             !isEditing &&
-                            !isDeadlinePassed &&
                             !isSubmissionEvaluated && (
-                            <Button
-                              variant="outline"
-                              onClick={() => setIsEditing(true)}
-                            >
-                              Update Submission
-                            </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setIsEditing(true)}
+                              >
+                                Update Submission
+                              </Button>
                             )}
                           {!(
                             !isEditing && submissionStatus === "Submitted"
@@ -1327,11 +1448,9 @@ export default function HackathonDetailPage({
                               variant="primary"
                               onClick={handleSubmit}
                               disabled={
-                                isDeadlinePassed ||
                                 isSubmissionEvaluated ||
-                                ((!canSubmit ||
-                                  submissionStatus === "Submitted") &&
-                                  !isEditing)
+                                isSubmissionLocked ||
+                                !canSubmit
                               }
                             >
                               {isSubmitting ? (
@@ -1349,6 +1468,100 @@ export default function HackathonDetailPage({
                           )}
                         </div>
                       </div>
+
+                      {isSubmissionEvaluated && submissionScoreBreakdown ? (
+                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-white/90">
+                              Score Breakdown
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setShowScoreBreakdown((current) => !current)
+                              }
+                            >
+                              {showScoreBreakdown ? (
+                                <>
+                                  <ChevronUp className="size-4" />
+                                  Hide scores
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="size-4" />
+                                  View scores
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          {showScoreBreakdown ? (
+                            <div className="mt-3 grid gap-3 text-sm text-white/80 sm:grid-cols-2 lg:grid-cols-3">
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">
+                                  Technical
+                                </p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(
+                                    submissionScoreBreakdown.technical,
+                                  )}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">
+                                  Feasibility
+                                </p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(
+                                    submissionScoreBreakdown.feasibility,
+                                  )}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">
+                                  Innovation
+                                </p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(
+                                    submissionScoreBreakdown.innovation,
+                                  )}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">
+                                  Presentation
+                                </p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(
+                                    submissionScoreBreakdown.presentation,
+                                  )}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">Impact</p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(submissionScoreBreakdown.impact)}
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                <p className="text-xs text-white/60">
+                                  Total Score
+                                </p>
+                                <p className="mt-1 font-semibold">
+                                  {formatScore(
+                                    submissionScoreBreakdown.totalScore,
+                                  )}
+                                </p>
+                                <p className="mt-1 text-xs text-white/50">
+                                  Evaluations:{" "}
+                                  {submissionScoreBreakdown.evaluationCount}
+                                </p>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </>
                   )}
                 </CardContent>
@@ -1501,7 +1714,9 @@ export default function HackathonDetailPage({
                     <p className="text-sm font-semibold text-white/90">
                       Step 3
                     </p>
-                    <ToneBadge tone={isSubmissionEvaluated ? "success" : "neutral"}>
+                    <ToneBadge
+                      tone={isSubmissionEvaluated ? "success" : "neutral"}
+                    >
                       {isSubmissionEvaluated ? "Evaluated" : "Evaluation"}
                     </ToneBadge>
                   </div>
@@ -1509,8 +1724,6 @@ export default function HackathonDetailPage({
                     Track your results on leaderboard after review.
                   </p>
                 </div>
-
-                
               </CardContent>
             </Card>
           </aside>

@@ -348,7 +348,9 @@ export const qrCodes = sqliteTable("qr_codes", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-
+  teamId: text("team_id").notNull().references(
+    () => teams.id, { onDelete: "cascade" }
+  ),
   type: text("type", {
     enum: ["entry", "breakfast", "lunch", "dinner"],
   }).notNull(),
@@ -356,7 +358,6 @@ export const qrCodes = sqliteTable("qr_codes", {
   token: text("token").notNull().unique(),
 
   isUsed: integer("is_used", { mode: "boolean" }).default(false).notNull(),
-
   expiresAt: text("expires_at").notNull(),
 
   createdAt: text("created_at")
@@ -414,3 +415,24 @@ export const certificates = sqliteTable("certificates", {
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
 });
+
+export const hackathonSchedules = sqliteTable(
+  "hackathon_schedules",
+  {
+    id: text("id").primaryKey(),
+    hackathonId: text("hackathon_id")
+      .notNull()
+      .references(() => hackathons.id, { onDelete: "cascade" }),
+    type: text("type", {
+      enum: ["entry", "breakfast", "lunch", "dinner"],
+    }).notNull(),
+    startTime: text("start_time"),
+    endTime: text("end_time").notNull(),
+  },
+  (table) => [
+    uniqueIndex("hackathon_schedule_unique_type").on(
+      table.hackathonId,
+      table.type,
+    ),
+  ],
+);

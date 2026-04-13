@@ -8,13 +8,12 @@ import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchHackathonShortlistedTeams } from "@/api";
 import { cn } from "@/lib/utils";
 
-type PublicLeaderboardTeam = {
+type ShortlistedTeam = {
   teamId: string;
   teamName: string;
-  totalScore: number;
-  qualified: boolean;
 };
 
 const readMessage = (value: unknown) => {
@@ -30,38 +29,35 @@ const readMessage = (value: unknown) => {
   return null;
 };
 
-const isPublicLeaderboardTeam = (value: unknown): value is PublicLeaderboardTeam => {
+const isShortlistedTeam = (value: unknown): value is ShortlistedTeam => {
   if (typeof value !== "object" || value === null) return false;
 
   const team = value as Record<string, unknown>;
   return (
     typeof team.teamId === "string" &&
-    typeof team.teamName === "string" &&
-    typeof team.totalScore === "number" &&
-    typeof team.qualified === "boolean"
+    typeof team.teamName === "string"
   );
 };
 
-const readLeaderboardTeams = (value: unknown): PublicLeaderboardTeam[] => {
+const readShortlistedTeams = (value: unknown): ShortlistedTeam[] => {
+  if (Array.isArray(value)) {
+    return value.filter(isShortlistedTeam);
+  }
+
   if (
     typeof value === "object" &&
     value !== null &&
     "data" in value &&
     Array.isArray((value as { data?: unknown }).data)
   ) {
-    return (value as { data: unknown[] }).data.filter(isPublicLeaderboardTeam);
+    return (value as { data: unknown[] }).data.filter(isShortlistedTeam);
   }
 
   return [];
 };
 
-const sortByScore = (teams: PublicLeaderboardTeam[]) =>
-  [...teams].sort(
-    (a, b) => b.totalScore - a.totalScore || a.teamName.localeCompare(b.teamName),
-  );
-
-const formatScore = (score: number) =>
-  Number.isInteger(score) ? String(score) : score.toFixed(2);
+const sortByTeamName = (teams: ShortlistedTeam[]) =>
+  [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
 
 const getTopRankClasses = (rank: number) => {
   if (rank === 1) {
@@ -102,7 +98,7 @@ export default function PublicLeaderboardPage() {
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [teams, setTeams] = React.useState<PublicLeaderboardTeam[]>([]);
+  const [teams, setTeams] = React.useState<ShortlistedTeam[]>([]);
 
   const loadLeaderboard = React.useCallback(async () => {
     if (!hackathonId) {
@@ -116,25 +112,17 @@ export default function PublicLeaderboardPage() {
     setError(null);
 
     try {
-      const res = await fetch(
-        `http://localhost:5000/hackathons/${encodeURIComponent(
-          hackathonId,
-        )}/shortlisted`,
-        {
-          method: "GET",
-          credentials: "include",
-        },
-      );
+      const res = await fetchHackathonShortlistedTeams(hackathonId);
 
       const data: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
         setTeams([]);
-        setError(readMessage(data) ?? "Failed to load leaderboard.");
+        setError(readMessage(data) ?? "Failed to load shortlisted teams.");
         return;
       }
 
-      setTeams(sortByScore(readLeaderboardTeams(data)));
+      setTeams(sortByTeamName(readShortlistedTeams(data)));
     } catch {
       setTeams([]);
       setError("Please check your connection and try again.");
@@ -147,10 +135,6 @@ export default function PublicLeaderboardPage() {
     loadLeaderboard();
   }, [loadLeaderboard]);
 
-  const highestScore = React.useMemo(() => {
-    if (teams.length === 0) return null;
-    return teams[0]?.totalScore ?? null;
-  }, [teams]);
 
   return (
     <div className="relative min-h-screen bg-black text-white">
@@ -172,7 +156,7 @@ export default function PublicLeaderboardPage() {
               Public Results
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-              Hackathon Leaderboard
+              Shortlisted Teams
             </h1>
           </div>
 
@@ -193,14 +177,14 @@ export default function PublicLeaderboardPage() {
             <CardContent className="flex items-center justify-center py-12 text-white/70">
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="size-5 animate-spin" />
-                Loading leaderboard...
+                Loading shortlisted teams...
               </span>
             </CardContent>
           </Card>
         ) : error ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-white">Unable to load leaderboard</CardTitle>
+              <CardTitle className="text-white">Unable to load shortlisted teams</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-rose-300">{error}</p>
@@ -212,29 +196,21 @@ export default function PublicLeaderboardPage() {
         ) : teams.length === 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-white">No rankings published yet</CardTitle>
+              <CardTitle className="text-white">No shortlisted teams yet</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-white/60">
-                Final results will appear here once evaluations are complete.
+                Shortlisted teams will appear here after judges confirm the shortlist.
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-1">
               <Card>
                 <CardContent className="py-5">
-                  <p className="text-xs uppercase tracking-wide text-white/60">Total Teams</p>
+                  <p className="text-xs uppercase tracking-wide text-white/60">Total Shortlisted</p>
                   <p className="mt-1 text-2xl font-semibold text-white">{teams.length}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="py-5">
-                  <p className="text-xs uppercase tracking-wide text-white/60">Highest Score</p>
-                  <p className="mt-1 text-2xl font-semibold text-white">
-                    {highestScore === null ? "-" : formatScore(highestScore)}
-                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -242,12 +218,12 @@ export default function PublicLeaderboardPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[620px] border-collapse text-sm">
+                  <table className="w-full min-w-[520px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-white/60">
                         <th className="px-4 py-3">Rank</th>
                         <th className="px-4 py-3">Team Name</th>
-                        <th className="px-4 py-3">Score</th>
+                        <th className="px-4 py-3">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -283,15 +259,12 @@ export default function PublicLeaderboardPage() {
                             <td className="px-4 py-4">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="font-semibold text-white">{team.teamName}</span>
-                                {team.qualified ? (
-                                  <Badge className="bg-emerald-500/15 text-emerald-200 ring-emerald-300/20">
-                                    Qualified
-                                  </Badge>
-                                ) : null}
                               </div>
                             </td>
                             <td className="px-4 py-4 text-base font-semibold text-white">
-                              {formatScore(team.totalScore)}
+                              <Badge className="bg-emerald-500/15 text-emerald-200 ring-emerald-300/20">
+                                Shortlisted
+                              </Badge>
                             </td>
                           </tr>
                         );

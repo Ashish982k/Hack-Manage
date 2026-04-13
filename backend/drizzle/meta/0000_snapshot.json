@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8c693568-41f6-4244-9a61-43f9903a6f8f",
+  "id": "f3fa2bd8-be88-45ff-8cfe-531a6a17249a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -302,7 +302,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -458,6 +458,74 @@
         "hackathonRoles_hackathon_id_hackathons_id_fk": {
           "name": "hackathonRoles_hackathon_id_hackathons_id_fk",
           "tableFrom": "hackathonRoles",
+          "tableTo": "hackathons",
+          "columnsFrom": [
+            "hackathon_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "hackathon_schedules": {
+      "name": "hackathon_schedules",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hackathon_id": {
+          "name": "hackathon_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "hackathon_schedule_unique_type": {
+          "name": "hackathon_schedule_unique_type",
+          "columns": [
+            "hackathon_id",
+            "type"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "hackathon_schedules_hackathon_id_hackathons_id_fk": {
+          "name": "hackathon_schedules_hackathon_id_hackathons_id_fk",
+          "tableFrom": "hackathon_schedules",
           "tableTo": "hackathons",
           "columnsFrom": [
             "hackathon_id"
@@ -636,6 +704,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "type": {
           "name": "type",
           "type": "text",
@@ -703,6 +778,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "qr_codes_team_id_teams_id_fk": {
+          "name": "qr_codes_team_id_teams_id_fk",
+          "tableFrom": "qr_codes",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
           ],
           "columnsTo": [
             "id"
@@ -986,6 +1074,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "start_time": {
           "name": "start_time",
           "type": "text",
@@ -1001,7 +1096,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "stage_hackathon_idx": {
+          "name": "stage_hackathon_idx",
+          "columns": [
+            "hackathon_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "stages_hackathon_id_hackathons_id_fk": {
           "name": "stages_hackathon_id_hackathons_id_fk",
@@ -1043,13 +1146,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "ppt_url": {

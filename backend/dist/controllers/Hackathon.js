@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../src/db";
-import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, teams, user, hackathonRoles, } from "../src/db/schema";
+import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema";
 const getFile = (value) => {
     const file = Array.isArray(value) ? value[0] : value;
     if (file &&
@@ -44,18 +44,40 @@ const parseEmailList = (value) => {
     return normalizeList(raw.split(","));
 };
 const parseStageType = (value) => {
-    if (value === "SUBMISSION" || value === "EVALUATION") {
+    if (value === "SUBMISSION" || value === "EVALUATION" || value === "FINAL") {
         return value;
     }
     if (typeof value !== "string") {
         return null;
     }
     const normalized = value.trim().toUpperCase();
-    if (normalized === "SUBMISSION" || normalized === "EVALUATION") {
+    if (normalized === "SUBMISSION" ||
+        normalized === "EVALUATION" ||
+        normalized === "FINAL") {
         return normalized;
     }
     return null;
 };
+const parseScheduleType = (value) => {
+    if (value === "entry" ||
+        value === "breakfast" ||
+        value === "lunch" ||
+        value === "dinner") {
+        return value;
+    }
+    if (typeof value !== "string") {
+        return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "entry" ||
+        normalized === "breakfast" ||
+        normalized === "lunch" ||
+        normalized === "dinner") {
+        return normalized;
+    }
+    return null;
+};
+const isTimeValue = (value) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
 const isHackathonAdmin = async (hackathonId, userId, createdBy) => {
     if (createdBy === userId)
         return true;
@@ -173,19 +195,15 @@ export const upload = async (c) => {
         if (!currentUser) {
             return c.json({ message: "Unauthorized" }, 401);
         }
-        const [hackathon] = await db
-            .select({
-            id: hackathons.id,
-            isSubmissionDeadlinePassed: sql `CASE WHEN datetime(${hackathons.registrationDeadline}) < datetime('now', 'localtime') THEN 1 ELSE 0 END`,
-        })
-            .from(hackathons)
-            .where(eq(hackathons.id, hackathonId))
-            .limit(1);
+        const hackathon = await db.query.hackathons.findFirst({
+            where: eq(hackathons.id, hackathonId),
+        });
         if (!hackathon) {
             return c.json({ message: "Hackathon not found" }, 404);
         }
-        if (hackathon.isSubmissionDeadlinePassed === 1) {
-            return c.json({ message: "Submission deadline has passed" }, 400);
+        const isAdminParticipant = await isHackathonAdmin(hackathonId, currentUser.id, hackathon.createdBy);
+        if (isAdminParticipant) {
+            return c.json({ message: "Hackathon admins cannot participate in this hackathon." }, 403);
         }
         const { driveUrl, githubUrl, problemStatementId } = await c.req.json();
         if (!driveUrl) {
@@ -314,7 +332,7 @@ export const newHackathon = async (c) => {
             }
             const stageType = parseStageType(stage.type);
             if (!stageType) {
-                return c.json({ message: "Each stage must have type SUBMISSION or EVALUATION" }, 400);
+                return c.json({ message: "Each stage must have type SUBMISSION, EVALUATION, or FINAL" }, 400);
             }
             await db.insert(stages).values({
                 id: crypto.randomUUID(),
@@ -348,11 +366,99 @@ export const newHackathon = async (c) => {
         }
         return c.json({
             message: "Hackathon created successfully",
+            hackathonId,
             filePath,
         });
     }
     catch (error) {
         console.error(error);
+        return c.json({ message: "Something went wrong" }, 500);
+    }
+};
+export const saveHackathonSchedules = async (c) => {
+    try {
+        const hackathonId = c.req.param("id");
+        const currentUser = c.get("user");
+        if (!hackathonId) {
+            return c.json({ message: "Hackathon not found" }, 404);
+        }
+        if (!currentUser) {
+            return c.json({ message: "Unauthorized" }, 401);
+        }
+        const hackathon = await db.query.hackathons.findFirst({
+            where: eq(hackathons.id, hackathonId),
+        });
+        if (!hackathon) {
+            return c.json({ message: "Hackathon not found" }, 404);
+        }
+        const canManage = await isHackathonAdmin(hackathonId, currentUser.id, hackathon.createdBy);
+        if (!canManage) {
+            return c.json({ message: "Access to admin only" }, 403);
+        }
+        const body = await c.req.json().catch(() => null);
+        if (!body || typeof body !== "object") {
+            return c.json({ message: "Invalid request body" }, 400);
+        }
+        const schedules = body.schedules;
+        if (!Array.isArray(schedules)) {
+            return c.json({ message: "Schedules are required" }, 400);
+        }
+        if (schedules.length === 0) {
+            return c.json({ message: "Schedules saved successfully" });
+        }
+        const finalStage = await db.query.stages.findFirst({
+            where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "FINAL")),
+        });
+        const dateSource = finalStage?.startTime ?? hackathon.endDate;
+        if (!dateSource) {
+            return c.json({ message: "Final round date is required before saving schedules" }, 400);
+        }
+        const finalRoundDate = dateSource.split("T")[0];
+        for (const item of schedules) {
+            if (!item || typeof item !== "object") {
+                return c.json({ message: "Invalid schedules format" }, 400);
+            }
+            const schedule = item;
+            const scheduleType = parseScheduleType(schedule.type);
+            if (!scheduleType) {
+                return c.json({ message: "Invalid schedule type" }, 400);
+            }
+            const startTime = typeof schedule.startTime === "string" ? schedule.startTime.trim() : "";
+            const endTime = typeof schedule.endTime === "string" ? schedule.endTime.trim() : "";
+            if (!endTime || !isTimeValue(endTime)) {
+                return c.json({ message: "Each schedule must have a valid endTime (HH:MM)" }, 400);
+            }
+            if (startTime && !isTimeValue(startTime)) {
+                return c.json({ message: "startTime must be in HH:MM format when provided" }, 400);
+            }
+            await db
+                .insert(hackathonSchedules)
+                .values({
+                id: crypto.randomUUID(),
+                hackathonId,
+                type: scheduleType,
+                startTime: startTime ? `${finalRoundDate}T${startTime}` : null,
+                endTime: `${finalRoundDate}T${endTime}`,
+            })
+                .onConflictDoUpdate({
+                target: [hackathonSchedules.hackathonId, hackathonSchedules.type],
+                set: {
+                    startTime: startTime ? `${finalRoundDate}T${startTime}` : null,
+                    endTime: `${finalRoundDate}T${endTime}`,
+                },
+            });
+        }
+        return c.json({ message: "Schedules saved successfully" });
+    }
+    catch (error) {
+        console.error(error);
+        const isScheduleTableMissing = error instanceof Error &&
+            error.message.toLowerCase().includes("no such table: hackathon_schedules");
+        if (isScheduleTableMissing) {
+            return c.json({
+                message: "Schedule storage is not initialized. Please run database migrations and retry.",
+            }, 500);
+        }
         return c.json({ message: "Something went wrong" }, 500);
     }
 };
@@ -395,7 +501,16 @@ export const getJudgeAccess = async (c) => {
         if (!hackathon)
             return c.json({ message: "Hackathon not found" }, 404);
         const isJudge = await isHackathonJudge(hackathonId, currentUser.id);
-        return c.json({ isJudge });
+        const isAdmin = await isHackathonAdmin(hackathonId, currentUser.id, hackathon.createdBy);
+        const activeStage = await db.query.stages.findFirst({
+            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            orderBy: [desc(sql `datetime(${stages.startTime})`)],
+        });
+        return c.json({
+            isJudge,
+            isAdmin,
+            activeStageType: activeStage?.type ?? null,
+        });
     }
     catch (error) {
         console.error(error);
@@ -470,6 +585,15 @@ export const getMember = async (c) => {
         if (!user)
             return c.json({ message: "Unauthorized" }, 401);
         const userId = user.id;
+        const hackathon = await db.query.hackathons.findFirst({
+            where: eq(hackathons.id, hackathonId),
+        });
+        if (!hackathon)
+            return c.json({ message: "Hackathon not found" }, 404);
+        const isAdminParticipant = await isHackathonAdmin(hackathonId, userId, hackathon.createdBy);
+        if (isAdminParticipant) {
+            return c.json({ joined: false, team: null });
+        }
         const participant = await db.query.hackathonParticipants.findFirst({
             where: and(eq(hackathonParticipants.hackathonId, hackathonId), eq(hackathonParticipants.userId, userId)),
         });
@@ -494,15 +618,37 @@ export const getMember = async (c) => {
                 .limit(1),
         ]);
         const latestSubmission = latestSubmissionRows[0] ?? null;
-        const hasEvaluation = latestSubmission
-            ? Boolean(await db.query.evaluations.findFirst({
-                where: eq(evaluations.submissionId, latestSubmission.id),
-            }))
-            : false;
+        const submissionScoreBreakdown = latestSubmission
+            ? (await db
+                .select({
+                technical: sql `COALESCE(AVG(${evaluations.technical}), 0)`,
+                feasibility: sql `COALESCE(AVG(${evaluations.feasibility}), 0)`,
+                innovation: sql `COALESCE(AVG(${evaluations.innovation}), 0)`,
+                presentation: sql `COALESCE(AVG(${evaluations.presentation}), 0)`,
+                impact: sql `COALESCE(AVG(${evaluations.impact}), 0)`,
+                totalScore: sql `COALESCE(AVG(${evaluations.total}), 0)`,
+                evaluationCount: sql `COUNT(${evaluations.id})`,
+            })
+                .from(evaluations)
+                .where(eq(evaluations.submissionId, latestSubmission.id)))[0]
+            : null;
+        const evaluationCount = Number(submissionScoreBreakdown?.evaluationCount ?? 0);
+        const hasEvaluation = evaluationCount > 0;
         const submission = latestSubmission
             ? {
                 ...latestSubmission,
                 evaluated: hasEvaluation,
+                scoreBreakdown: hasEvaluation
+                    ? {
+                        technical: Number(submissionScoreBreakdown?.technical ?? 0),
+                        feasibility: Number(submissionScoreBreakdown?.feasibility ?? 0),
+                        innovation: Number(submissionScoreBreakdown?.innovation ?? 0),
+                        presentation: Number(submissionScoreBreakdown?.presentation ?? 0),
+                        impact: Number(submissionScoreBreakdown?.impact ?? 0),
+                        totalScore: Number(submissionScoreBreakdown?.totalScore ?? 0),
+                        evaluationCount,
+                    }
+                    : null,
             }
             : null;
         return c.json({
@@ -531,6 +677,10 @@ export const joinHackathon = async (c) => {
         });
         if (!hackathon)
             return c.json({ message: "Hackathon not found" }, 404);
+        const isAdminParticipant = await isHackathonAdmin(hackathonId, userId, hackathon.createdBy);
+        if (isAdminParticipant) {
+            return c.json({ message: "Hackathon admins cannot participate in this hackathon." }, 403);
+        }
         await ensureParticipant(hackathonId, userId);
         return c.json({ message: "Joined" });
     }

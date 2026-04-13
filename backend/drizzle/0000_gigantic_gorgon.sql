@@ -37,7 +37,7 @@ CREATE TABLE `evaluations` (
 	`impact_score` integer NOT NULL,
 	`total_score` integer NOT NULL,
 	FOREIGN KEY (`submission_id`) REFERENCES `submissions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`judge_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`judge_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `unique_judge_submission` ON `evaluations` (`submission_id`,`judge_id`);--> statement-breakpoint
@@ -63,6 +63,16 @@ CREATE TABLE `hackathonRoles` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `unique_user_hackathon` ON `hackathonRoles` (`hackathon_id`,`user_id`);--> statement-breakpoint
+CREATE TABLE `hackathon_schedules` (
+	`id` text PRIMARY KEY NOT NULL,
+	`hackathon_id` text NOT NULL,
+	`type` text NOT NULL,
+	`start_time` text,
+	`end_time` text NOT NULL,
+	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `hackathon_schedule_unique_type` ON `hackathon_schedules` (`hackathon_id`,`type`);--> statement-breakpoint
 CREATE TABLE `hackathons` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
@@ -88,13 +98,15 @@ CREATE TABLE `qr_codes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`hackathon_id` text NOT NULL,
 	`user_id` text NOT NULL,
+	`team_id` text NOT NULL,
 	`type` text NOT NULL,
 	`token` text NOT NULL,
 	`is_used` integer DEFAULT false NOT NULL,
 	`expires_at` text NOT NULL,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`team_id`) REFERENCES `teams`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `qr_codes_token_unique` ON `qr_codes` (`token`);--> statement-breakpoint
@@ -136,16 +148,17 @@ CREATE TABLE `stages` (
 	`hackathon_id` text NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
+	`type` text NOT NULL,
 	`start_time` text,
 	`end_time` text,
 	FOREIGN KEY (`hackathon_id`) REFERENCES `hackathons`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `stage_hackathon_idx` ON `stages` (`hackathon_id`);--> statement-breakpoint
 CREATE TABLE `submissions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`team_id` text NOT NULL,
 	`stage_id` text NOT NULL,
-	`type` text,
 	`ppt_url` text,
 	`github_url` text,
 	`problem_statement_id` text,

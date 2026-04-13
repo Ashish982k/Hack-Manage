@@ -7,6 +7,7 @@ import {
   Upload,
   Plus,
   Trash2,
+  Clock3,
   MapPin,
   Calendar as CalendarIcon,
   FileText,
@@ -24,7 +25,7 @@ import { Navbar } from "@/components/navbar";
 import { MultiEmailInput } from "@/components/multi-email-input";
 import { authClient } from "@/lib/auth-client";
 import { normalizeEmail } from "@/lib/email-list";
-import { createHackathon } from "@/api";
+import { createHackathon, saveHackathonSchedules } from "@/api";
 
 function PageGlow() {
   return (
@@ -42,7 +43,7 @@ function PageGlow() {
 interface Stage {
   id: string;
   title: string;
-  type: "SUBMISSION" | "EVALUATION";
+  type: "SUBMISSION" | "EVALUATION" | "FINAL";
   startDate: string;
   endDate: string;
   description: string;
@@ -53,6 +54,16 @@ interface ProblemStatement {
   title: string;
   description: string;
 }
+
+type ScheduleType = "entry" | "breakfast" | "lunch" | "dinner";
+
+type ScheduleOption = {
+  enabled: boolean;
+  startTime: string;
+  endTime: string;
+};
+
+type ScheduleState = Record<ScheduleType, ScheduleOption>;
 
 export default function CreateHackathonPage() {
   const router = useRouter();
@@ -79,6 +90,12 @@ export default function CreateHackathonPage() {
   const [headerImage, setHeaderImage] = useState<File | null>(null);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [judgeEmails, setJudgeEmails] = useState<string[]>([]);
+  const [finalRoundSchedule, setFinalRoundSchedule] = useState<ScheduleState>({
+    entry: { enabled: false, startTime: "", endTime: "" },
+    breakfast: { enabled: false, startTime: "", endTime: "" },
+    lunch: { enabled: false, startTime: "", endTime: "" },
+    dinner: { enabled: false, startTime: "", endTime: "" },
+  });
 
   const [stages, setStages] = useState<Stage[]>([
     {
@@ -115,6 +132,32 @@ export default function CreateHackathonPage() {
         stage.id === id ? { ...stage, [field]: value } : stage,
       ),
     );
+  };
+
+  const updateScheduleEnabled = (type: ScheduleType, enabled: boolean) => {
+    setFinalRoundSchedule((current) => ({
+      ...current,
+      [type]: {
+        ...current[type],
+        enabled,
+        startTime: enabled ? current[type].startTime : "",
+        endTime: enabled ? current[type].endTime : "",
+      },
+    }));
+  };
+
+  const updateScheduleTime = (
+    type: ScheduleType,
+    field: "startTime" | "endTime",
+    value: string,
+  ) => {
+    setFinalRoundSchedule((current) => ({
+      ...current,
+      [type]: {
+        ...current[type],
+        [field]: value,
+      },
+    }));
   };
 
   const handleAddProblemStatement = () => {
@@ -200,14 +243,61 @@ export default function CreateHackathonPage() {
     );
     formData.append("judges", JSON.stringify(judges));
 
+    const enabledSchedules = (
+      Object.entries(finalRoundSchedule) as Array<[ScheduleType, ScheduleOption]>
+    )
+      .filter(([, schedule]) => schedule.enabled)
+      .map(([type, schedule]) => ({
+        type,
+        startTime: schedule.startTime.trim(),
+        endTime: schedule.endTime.trim(),
+      }));
+
+    const invalidSchedule = enabledSchedules.find((schedule) => !schedule.endTime);
+    if (invalidSchedule) {
+      alert(`Please provide an end time for ${invalidSchedule.type}.`);
+      return;
+    }
+
     try {
       const res = await createHackathon(formData);
+      const data = (await res.json().catch(() => null)) as
+        | { message?: string; hackathonId?: string }
+        | null;
 
       if (res.ok) {
+        if (enabledSchedules.length > 0) {
+          const createdHackathonId = data?.hackathonId;
+          if (!createdHackathonId) {
+            alert("Hackathon created, but schedules could not be saved.");
+            router.push("/hackathons");
+            return;
+          }
+
+          const scheduleRes = await saveHackathonSchedules(createdHackathonId, {
+            schedules: enabledSchedules.map((schedule) => ({
+              type: schedule.type,
+              startTime: schedule.startTime || undefined,
+              endTime: schedule.endTime,
+            })),
+          });
+
+          if (!scheduleRes.ok) {
+            const scheduleData = (await scheduleRes.json().catch(() => null)) as
+              | { message?: string }
+              | null;
+            alert(
+              scheduleData?.message ||
+                "Hackathon created, but schedules could not be saved.",
+            );
+            router.push("/hackathons");
+            return;
+          }
+        }
+
         alert("Hackathon created successfully!");
         router.push("/hackathons");
       } else {
-        const data = await res.json().catch(() => null);
         alert(data?.message || "Failed to create hackathon");
       }
     } catch (error) {
@@ -421,6 +511,7 @@ export default function CreateHackathonPage() {
                           >
                             <option value="SUBMISSION">Submission</option>
                             <option value="EVALUATION">Evaluation</option>
+                            <option value="FINAL">Final</option>
                           </select>
                         </div>
 
@@ -496,16 +587,102 @@ export default function CreateHackathonPage() {
             </CardContent>
           </Card>
 
-          {/* SECTION 3: HACKATHON ACCESS / ROLES */}
+          {/* SECTION 3: FINAL ROUND SCHEDULE */} 
+          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <Clock3 className="size-5 text-amber-300" />
+                <CardTitle className="text-xl font-semibold text-white">
+                  3. Final Round Schedule
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-2">
+              <p className="text-sm text-white/60">
+                Configure optional entry and meal timings for the final round.
+                Only enabled items will be saved.
+              </p>
+
+              {(
+                [
+                  { key: "entry", label: "Entry" },
+                  { key: "breakfast", label: "Breakfast" },
+                  { key: "lunch", label: "Lunch" },
+                  { key: "dinner", label: "Dinner" },
+                ] as const
+              ).map((item) => {
+                const config = finalRoundSchedule[item.key];
+                return (
+                  <div
+                    key={item.key}
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={config.enabled}
+                        onChange={(e) =>
+                          updateScheduleEnabled(item.key, e.target.checked)
+                        }
+                        className="size-4 rounded border-white/20 bg-black/20 text-purple-500 focus:ring-purple-500/40"
+                      />
+                      <span className="text-sm font-semibold text-white/90">
+                        {item.label}
+                      </span>
+                    </label>
+
+                    {config.enabled ? (
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
+                            Start Time (Optional)
+                          </label>
+                          <Input
+                            type="time"
+                            value={config.startTime}
+                            onChange={(e) =>
+                              updateScheduleTime(
+                                item.key,
+                                "startTime",
+                                e.target.value,
+                              )
+                            }
+                            className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
+                            End Time <span className="text-purple-400">*</span>
+                          </label>
+                          <Input
+                            type="time"
+                            value={config.endTime}
+                            onChange={(e) =>
+                              updateScheduleTime(item.key, "endTime", e.target.value)
+                            }
+                            className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                            required
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* SECTION 4: HACKATHON ACCESS / ROLES */}
           <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                 <Users className="size-5 text-emerald-400" />
-                <CardTitle className="text-xl font-semibold text-white">
-                  3. Hackathon Access / Roles
-                </CardTitle>
-              </div>
-            </CardHeader>
+                  <CardTitle className="text-xl font-semibold text-white">
+                    4. Hackathon Access / Roles
+                  </CardTitle>
+                </div>
+              </CardHeader>
             <CardContent className="space-y-6 pt-2">
               <p className="text-sm text-white/60">
                 Add users who can help manage and evaluate this hackathon. Your
@@ -530,16 +707,16 @@ export default function CreateHackathonPage() {
             </CardContent>
           </Card>
 
-          {/* SECTION 4: HACKATHON INFORMATION */}
+          {/* SECTION 5: HACKATHON INFORMATION */}
           <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3 border-b border-white/10 pb-4">
                 <FileText className="size-5 text-purple-400" />
-                <CardTitle className="text-xl font-semibold text-white">
-                  4. Problem Statements & Details
-                </CardTitle>
-              </div>
-            </CardHeader>
+                  <CardTitle className="text-xl font-semibold text-white">
+                    5. Problem Statements & Details
+                  </CardTitle>
+                </div>
+              </CardHeader>
             <CardContent className="pt-2">
               <p className="mb-4 text-sm text-white/60">
                 Add one or more problem statements, then describe the hackathon

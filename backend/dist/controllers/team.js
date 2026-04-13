@@ -1,13 +1,26 @@
 import crypto from "crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../src/db";
-import { hackathonParticipants, hackathonRoles, teamMembers, teams, hackathons, submissions, user, } from "../src/db/schema";
+import { hackathonParticipants, hackathonRoles, teamMembers, teams, hackathons, submissions, evaluations, user, } from "../src/db/schema";
 const findMembershipForHackathon = async (userId, hackathonId) => {
     const memberships = await db.query.teamMembers.findMany({
         where: eq(teamMembers.userId, userId),
         with: { team: true },
     });
     return memberships.find((m) => m.team.hackathonId === hackathonId) || null;
+};
+const isHackathonAdminParticipant = async (hackathonId, userId) => {
+    const hackathon = await db.query.hackathons.findFirst({
+        where: eq(hackathons.id, hackathonId),
+    });
+    if (!hackathon)
+        return false;
+    if (hackathon.createdBy === userId)
+        return true;
+    const adminRole = await db.query.hackathonRoles.findFirst({
+        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "admin")),
+    });
+    return Boolean(adminRole);
 };
 const ensureParticipant = async (hackathonId, userId) => {
     const existing = await db.query.hackathonParticipants.findFirst({
@@ -65,6 +78,26 @@ export const getTeamDetails = async (c) => {
                 .limit(1),
         ]);
         const latestSubmission = latestSubmissionRows[0] ?? null;
+        const previousEvaluation = latestSubmission
+            ? await db.query.evaluations.findFirst({
+                where: and(eq(evaluations.submissionId, latestSubmission.id), eq(evaluations.judgeId, currentUser.id)),
+            })
+            : null;
+        const submission = latestSubmission
+            ? {
+                ...latestSubmission,
+                previousScores: previousEvaluation
+                    ? {
+                        innovation: previousEvaluation.innovation,
+                        feasibility: previousEvaluation.feasibility,
+                        technical: previousEvaluation.technical,
+                        presentation: previousEvaluation.presentation,
+                        impact: previousEvaluation.impact,
+                        total: previousEvaluation.total,
+                    }
+                    : null,
+            }
+            : null;
         return c.json({
             team: {
                 id: team.id,
@@ -83,7 +116,7 @@ export const getTeamDetails = async (c) => {
                         }
                         : null,
                 })),
-                submission: latestSubmission,
+                submission,
             },
         });
     }
@@ -135,6 +168,10 @@ export const addTeamMember = async (c) => {
         });
         if (!userToAdd)
             return c.json({ message: "User not found" }, 400);
+        const isAdminParticipant = await isHackathonAdminParticipant(team.hackathonId, userToAdd.id);
+        if (isAdminParticipant) {
+            return c.json({ message: "Hackathon admins cannot participate in this hackathon." }, 403);
+        }
         if (userToAdd.id === team.leaderId)
             return c.json({ message: "Already leader" }, 409);
         const exists = await db.query.teamMembers.findFirst({
@@ -217,6 +254,10 @@ export const updateTeamMember = async (c) => {
         if (member.status !== "pending")
             return c.json({ message: "Already processed" }, 409);
         if (action === "approve") {
+            const isAdminParticipant = await isHackathonAdminParticipant(team.hackathonId, targetUserId);
+            if (isAdminParticipant) {
+                return c.json({ message: "Hackathon admins cannot participate in this hackathon." }, 403);
+            }
             await db
                 .update(teamMembers)
                 .set({ status: "approved" })
@@ -242,6 +283,10 @@ export const createTeam = async (c) => {
         });
         if (!hackathon)
             return c.json({ message: "Invalid hackathon" }, 400);
+        const isAdminParticipant = await isHackathonAdminParticipant(hackathonId, userId);
+        if (isAdminParticipant) {
+            return c.json({ message: "Hackathon admins cannot participate in this hackathon." }, 403);
+        }
         const participant = await ensureParticipant(hackathonId, userId);
         if (!participant)
             return c.json({ message: "Join hackathon first" }, 400);
@@ -270,6 +315,9 @@ export const createTeam = async (c) => {
             });
             if (!u || u.id === userId)
                 continue;
+            const isMemberAdminParticipant = await isHackathonAdminParticipant(hackathonId, u.id);
+            if (isMemberAdminParticipant)
+                continue;
             const inTeam = await findMembershipForHackathon(u.id, hackathonId);
             if (inTeam)
                 continue;
@@ -286,4 +334,6 @@ export const createTeam = async (c) => {
     catch {
         return c.json({ message: "Something went wrong" }, 500);
     }
+};
+export const scoreTeam = async (c) => {
 };

@@ -4,9 +4,10 @@ import { db } from "../src/db";
 import { hackathons, problemStatements, teams, submissions, teamMembers, shortlistedTeams, hackathonParticipants, stages, evaluations, user, hackathonRoles, } from "../src/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { deleteHackathon } from "../controllers/admins";
-import { upload, newHackathon, getMember, getHackathonRoles, getJudgeAccess, joinHackathon, updateHackathonRoles, deleteUser, } from "../controllers/Hackathon";
+import { upload, newHackathon, getMember, getHackathonRoles, getJudgeAccess, joinHackathon, saveHackathonSchedules, updateHackathonRoles, deleteUser, } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
 import { createShortlistedTeams, evaluateSubmission, fetchEvaluatedTeams, fetchShortlistedTeams, getSubmissions } from "../controllers/judges";
+import { generateQR } from "../controllers/qr";
 const Hack = new Hono();
 Hack.use("*", authMiddleware);
 Hack.post("/:id/uploads", authMiddleware, upload);
@@ -15,6 +16,7 @@ Hack.get("/:id/roles", authMiddleware, getHackathonRoles);
 Hack.get("/:id/judge-access", authMiddleware, getJudgeAccess);
 Hack.patch("/:id/roles", authMiddleware, updateHackathonRoles);
 Hack.post("/", authMiddleware, newHackathon);
+Hack.post("/:id/schedule", authMiddleware, saveHackathonSchedules);
 Hack.get("/", authMiddleware, async (c) => {
     try {
         const all = await db.select().from(hackathons);
@@ -64,4 +66,6 @@ Hack.post("/:id/evaluate/:teamId", authMiddleware, judgeMiddleware, evaluateSubm
 Hack.get("/:id/leaderboard", authMiddleware, judgeMiddleware, fetchEvaluatedTeams);
 Hack.post("/:id/shortlist", authMiddleware, judgeMiddleware, createShortlistedTeams);
 Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
+//QR code 
+Hack.get("/:id/qr", authMiddleware, generateQR);
 export default Hack;

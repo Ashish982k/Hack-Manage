@@ -23,11 +23,13 @@ import {
   getHackathonRoles,
   getJudgeAccess,
   joinHackathon,
+  saveHackathonSchedules,
   updateHackathonRoles,
   deleteUser,
 } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
 import { createShortlistedTeams, evaluateSubmission, fetchEvaluatedTeams, fetchShortlistedTeams, getSubmissions } from "../controllers/judges";
+import { generateQR, markQR } from "../controllers/qr";
 
 
 const Hack = new Hono();
@@ -40,6 +42,7 @@ Hack.get("/:id/judge-access", authMiddleware, getJudgeAccess);
 Hack.patch("/:id/roles", authMiddleware, updateHackathonRoles);
 
 Hack.post("/", authMiddleware, newHackathon);
+Hack.post("/:id/schedule", authMiddleware, saveHackathonSchedules);
 Hack.get("/", authMiddleware, async (c) => {
   try {
     const all = await db.select().from(hackathons);
@@ -96,5 +99,8 @@ Hack.get("/:id/leaderboard", authMiddleware, judgeMiddleware, fetchEvaluatedTeam
 Hack.post("/:id/shortlist", authMiddleware, judgeMiddleware, createShortlistedTeams);
 Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
 
+//QR code 
+Hack.get("/:id/qr", authMiddleware, generateQR);
+Hack.post("/:id/scan", authMiddleware, markQR);
 
 export default Hack;

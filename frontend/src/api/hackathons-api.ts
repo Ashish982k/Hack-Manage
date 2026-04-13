@@ -13,6 +13,22 @@ export const createHackathon = (formData: FormData) =>
     body: formData,
   });
 
+export const saveHackathonSchedules = (
+  hackathonId: string,
+  payload: {
+    schedules: Array<{
+      type: "entry" | "breakfast" | "lunch" | "dinner";
+      startTime?: string;
+      endTime: string;
+    }>;
+  },
+) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/schedule`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
 export const deleteHackathon = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}`, {
     method: "DELETE",
@@ -69,6 +85,42 @@ export const fetchJudgeSubmissions = (hackathonId: string) =>
 
 export const fetchHackathonLeaderboard = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/leaderboard`);
+
+export const fetchHackathonShortlistedTeams = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/shortlisted`);
+
+export const confirmHackathonShortlist = (
+  hackathonId: string,
+  payload: { teamIds: string[] },
+) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/shortlist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const fetchHackathonQrCodes = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/qr`);
+
+export const scanHackathonQr = (
+  hackathonId: string,
+  payload: { token: string },
+) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/scan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const generateHackathonEntryQr = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/generate-entry-qr`, {
+    method: "POST",
+  });
+
+export const generateHackathonFoodQr = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/generate-food-qr`, {
+    method: "POST",
+  });
 
 export const evaluateTeamSubmission = (
   hackathonId: string,

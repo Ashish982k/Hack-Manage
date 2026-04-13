@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { hackathonRoles, teams, submissions, stages, evaluations, shortlistedTeams, } from "../src/db/schema";
-import { eq, and, inArray, sql, desc, isNotNull } from "drizzle-orm";
+import { eq, and, inArray, sql, desc, isNotNull, asc } from "drizzle-orm";
 import { db } from "../src/db";
 const toTimestamp = (value) => {
     const timestamp = Date.parse(value ?? "");
@@ -143,9 +143,6 @@ export const evaluateSubmission = async (c) => {
         const alreadyEvaluated = await db.query.evaluations.findFirst({
             where: and(eq(evaluations.submissionId, submitted.id), eq(evaluations.judgeId, userId)),
         });
-        if (alreadyEvaluated) {
-            return c.json({ message: "You have already evaluated this submission" }, 400);
-        }
         const data = await c.req.formData();
         const innovation = Number(data.get("innovation"));
         const feasibility = Number(data.get("feasibility"));
@@ -161,6 +158,23 @@ export const evaluateSubmission = async (c) => {
             return c.json({ message: "Scores must be integers between 0 and 10" }, 400);
         }
         const total = innovation + feasibility + technical + impact + presentation;
+        if (alreadyEvaluated) {
+            await db
+                .update(evaluations)
+                .set({
+                innovation,
+                feasibility,
+                technical,
+                impact,
+                presentation,
+                total,
+            })
+                .where(eq(evaluations.id, alreadyEvaluated.id));
+            return c.json({
+                message: "Evaluation updated successfully",
+                total,
+            });
+        }
         await db.insert(evaluations).values({
             id: crypto.randomUUID(),
             submissionId: submitted.id,
@@ -265,24 +279,38 @@ export const createShortlistedTeams = async (c) => {
     if (!isJudge) {
         return c.json({ message: "Unauthorized judge" }, 403);
     }
-    const evalStage = await getStage(db, hackathonId, "EVALUATION");
-    if (!evalStage) {
-        return c.json({ message: "No evaluation stage found" }, 400);
+    const activeEvaluationStage = await db.query.stages.findFirst({
+        where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "EVALUATION"), isNotNull(stages.startTime), isNotNull(stages.endTime), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+        orderBy: [asc(sql `datetime(${stages.startTime})`)],
+    });
+    if (!activeEvaluationStage) {
+        return c.json({ message: "No active evaluation stage found" }, 400);
+    }
+    const orderedStages = await db.query.stages.findMany({
+        where: and(eq(stages.hackathonId, hackathonId), isNotNull(stages.startTime)),
+        orderBy: [asc(sql `datetime(${stages.startTime})`), asc(stages.id)],
+    });
+    const activeStageIndex = orderedStages.findIndex((stage) => stage.id === activeEvaluationStage.id);
+    const nextStage = activeStageIndex >= 0 && activeStageIndex < orderedStages.length - 1
+        ? orderedStages[activeStageIndex + 1]
+        : null;
+    if (!nextStage) {
+        return c.json({ message: "No next stage available for shortlisting" }, 400);
     }
     for (const tid of teamIds) {
         const exists = await db.query.shortlistedTeams.findFirst({
-            where: and(eq(shortlistedTeams.teamId, tid), eq(shortlistedTeams.hackathonId, hackathonId), eq(shortlistedTeams.stageId, evalStage.id)),
+            where: and(eq(shortlistedTeams.teamId, tid), eq(shortlistedTeams.hackathonId, hackathonId), eq(shortlistedTeams.stageId, nextStage.id)),
         });
         if (!exists) {
             await db.insert(shortlistedTeams).values({
                 id: crypto.randomUUID(),
                 teamId: tid,
                 hackathonId,
-                stageId: evalStage.id,
+                stageId: nextStage.id,
             });
         }
     }
-    return c.json({ message: "Teams shortlisted successfully" }, 200);
+    return c.json({ message: "Teams shortlisted successfully", nextStageId: nextStage.id }, 200);
 };
 export const fetchShortlistedTeams = async (c) => {
     const hackathonId = c.req.param("id");
@@ -293,18 +321,25 @@ export const fetchShortlistedTeams = async (c) => {
     if (!hackathonId) {
         return c.json({ message: "Hackathon ID is required" }, 400);
     }
-    const isJudge = await db.query.hackathonRoles.findFirst({
-        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "judge")),
+    const finalStage = await db.query.stages.findFirst({
+        where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "FINAL"), isNotNull(stages.startTime)),
+        orderBy: [asc(sql `datetime(${stages.startTime})`)],
     });
-    if (!isJudge) {
-        return c.json({ message: "Unauthorized judge" }, 403);
-    }
     const evalStage = await getStage(db, hackathonId, "EVALUATION");
-    if (!evalStage) {
-        return c.json({ message: "No evaluation stage found" }, 400);
+    const stageIds = [finalStage?.id, evalStage?.id].filter((stageId) => typeof stageId === "string");
+    if (stageIds.length === 0) {
+        return c.json({ message: "No stage available for shortlisted teams" }, 400);
     }
-    const shortlisted = await db.query.shortlistedTeams.findMany({
-        where: and(eq(shortlistedTeams.hackathonId, hackathonId), eq(shortlistedTeams.stageId, evalStage.id))
-    });
-    return c.json(shortlisted);
+    const shortlistedRows = await db
+        .select({
+        id: shortlistedTeams.id,
+        teamId: shortlistedTeams.teamId,
+        teamName: teams.name,
+    })
+        .from(shortlistedTeams)
+        .innerJoin(teams, eq(shortlistedTeams.teamId, teams.id))
+        .where(and(eq(shortlistedTeams.hackathonId, hackathonId), inArray(shortlistedTeams.stageId, stageIds)))
+        .orderBy(teams.name);
+    const shortlisted = Array.from(new Map(shortlistedRows.map((row) => [row.teamId, row])).values());
+    return c.json({ data: shortlisted });
 };

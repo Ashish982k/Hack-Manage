@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/home/shared";
+import { authClient } from "@/lib/auth-client";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,6 +41,17 @@ export default function CTA() {
     return () => ctx.revert();
   }, []);
 
+  
+
+  const handleRoute = async () => {
+    const {data : session} = await authClient.getSession();
+    if (!session?.user?.id){
+      window.location.href = "/login";
+    }
+    else {
+      window.location.href = "/hackathons";
+    }
+  }
   return (
     <section ref={sectionRef} className="py-24 sm:py-32">
       <Container>
@@ -72,7 +84,7 @@ export default function CTA() {
                   size="lg"
                   className="group relative overflow-hidden text-base px-8 py-4"
                 >
-                  <span className="relative z-10">Get Started</span>
+                  <span className="relative z-10" onClick = {handleRoute}>Get Started</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </Button>
                 <Button

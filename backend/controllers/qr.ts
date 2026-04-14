@@ -221,3 +221,4 @@ export const markQR = async (c: AppContext) => {
     type: qr[0].type,
   }, 200);
 };
+

@@ -1,6 +1,9 @@
 import { createAuthClient } from "better-auth/react";
-import { API_BASE_URL } from "@/api/client";
+import { BACKEND_URL } from "@/api/client";
+
+const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL?.trim();
+const authBaseUrl = frontendUrl ? frontendUrl.replace(/\/+$/, "") : BACKEND_URL;
 
 export const authClient = createAuthClient({
-  baseURL: `${API_BASE_URL}/api/auth`,
+  baseURL: `${authBaseUrl}/api/auth`,
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gavel, Loader2, Users } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
@@ -77,7 +77,9 @@ export default function EvaluateTeamPage({
   params: Promise<{ id: string; teamId: string }>;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { id: hackathonId, teamId } = React.use(params);
+  const stageId = searchParams.get("stageId");
   const { data: session, isPending: isSessionPending } = authClient.useSession();
 
   const [team, setTeam] = React.useState<TeamDetailsResponse["team"] | null>(null);
@@ -115,7 +117,7 @@ export default function EvaluateTeamPage({
       setError(null);
 
       try {
-        const res = await fetchTeamDetailsById(teamId);
+        const res = await fetchTeamDetailsById(teamId, stageId);
         const data: unknown = await res.json().catch(() => null);
 
         if (!res.ok) {
@@ -159,7 +161,7 @@ export default function EvaluateTeamPage({
     };
 
     loadTeamDetails();
-  }, [hackathonId, isSessionPending, router, session?.user?.id, teamId]);
+  }, [hackathonId, isSessionPending, router, session?.user?.id, stageId, teamId]);
 
   const updateScore = (field: ScoreField, value: string) => {
     setScores((current) => ({ ...current, [field]: value }));
@@ -202,7 +204,7 @@ export default function EvaluateTeamPage({
         technical: parsedScores.technical,
         presentation: parsedScores.presentation,
         impact: parsedScores.impact,
-      });
+      }, stageId);
 
       const data: unknown = await res.json().catch(() => null);
 

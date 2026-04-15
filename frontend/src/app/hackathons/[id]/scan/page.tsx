@@ -256,6 +256,7 @@ export default function HackathonScanPage() {
 
         const role = readString(payload, "role")?.toLowerCase();
         const teamId = readString(payload, "teamId");
+        const stageId = readString(payload, "stageId");
 
         if (role === "judge" || (!!teamId && role !== "admin")) {
           if (!teamId) {
@@ -266,9 +267,13 @@ export default function HackathonScanPage() {
           }
 
           setScanState("success");
-          setFeedback("Team verified. Redirecting to evaluation...");
+          setFeedback("Team verified. Redirecting to final evaluation...");
           setIsScannerActive(false);
-          router.push(`/hackathons/${hackathonId}/judge/evaluate/${teamId}`);
+          router.push(
+            `/hackathons/${hackathonId}/judge/final/evaluate/${teamId}${
+              stageId ? `?stageId=${encodeURIComponent(stageId)}` : ""
+            }`,
+          );
           return;
         }
 

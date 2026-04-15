@@ -191,9 +191,15 @@ export const markQR = async (c: AppContext) => {
   }
 
   if(isJudge.length > 0){
+    const finalStageId = await getFinalStage(hackathonId);
+    if (!finalStageId) {
+      return c.json({ error: "Final stage not found for this hackathon" }, 404);
+    }
+
     return c.json({
       role: "judge",
-      teamId: qr[0].teamId
+      teamId: qr[0].teamId,
+      stageId: finalStageId,
     });
   }
 

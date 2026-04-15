@@ -2,8 +2,10 @@ import { fetchFromApi } from "./client";
 
 const encode = (value: string) => encodeURIComponent(value);
 
-export const fetchTeamDetailsById = (teamId: string) =>
-  fetchFromApi(`/teams/${encode(teamId)}`);
+export const fetchTeamDetailsById = (teamId: string, stageId?: string | null) =>
+  fetchFromApi(
+    `/teams/${encode(teamId)}${stageId ? `?stageId=${encode(stageId)}` : ""}`,
+  );
 
 export const createTeam = (payload: {
   hackathonId: string;

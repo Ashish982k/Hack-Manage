@@ -77,7 +77,8 @@ const parseScheduleType = (value) => {
     }
     return null;
 };
-const isTimeValue = (value) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+const isDateTimeValue = (value) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(value));
 const isHackathonAdmin = async (hackathonId, userId, createdBy) => {
     if (createdBy === userId)
         return true;
@@ -403,17 +404,19 @@ export const saveHackathonSchedules = async (c) => {
         if (!Array.isArray(schedules)) {
             return c.json({ message: "Schedules are required" }, 400);
         }
-        if (schedules.length === 0) {
-            return c.json({ message: "Schedules saved successfully" });
+        const requiredTypes = [
+            "entry",
+            "breakfast",
+            "lunch",
+            "dinner",
+        ];
+        if (schedules.length !== requiredTypes.length) {
+            return c.json({
+                message: "Schedules for entry, breakfast, lunch, and dinner are required.",
+            }, 400);
         }
-        const finalStage = await db.query.stages.findFirst({
-            where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "FINAL")),
-        });
-        const dateSource = finalStage?.startTime ?? hackathon.endDate;
-        if (!dateSource) {
-            return c.json({ message: "Final round date is required before saving schedules" }, 400);
-        }
-        const finalRoundDate = dateSource.split("T")[0];
+        const seenTypes = new Set();
+        const normalizedSchedules = [];
         for (const item of schedules) {
             if (!item || typeof item !== "object") {
                 return c.json({ message: "Invalid schedules format" }, 400);
@@ -423,28 +426,53 @@ export const saveHackathonSchedules = async (c) => {
             if (!scheduleType) {
                 return c.json({ message: "Invalid schedule type" }, 400);
             }
+            if (seenTypes.has(scheduleType)) {
+                return c.json({ message: "Duplicate schedule type found" }, 400);
+            }
+            seenTypes.add(scheduleType);
             const startTime = typeof schedule.startTime === "string" ? schedule.startTime.trim() : "";
             const endTime = typeof schedule.endTime === "string" ? schedule.endTime.trim() : "";
-            if (!endTime || !isTimeValue(endTime)) {
-                return c.json({ message: "Each schedule must have a valid endTime (HH:MM)" }, 400);
+            if (!startTime || !isDateTimeValue(startTime)) {
+                return c.json({
+                    message: "Each schedule must have a valid startTime in YYYY-MM-DDTHH:MM format",
+                }, 400);
             }
-            if (startTime && !isTimeValue(startTime)) {
-                return c.json({ message: "startTime must be in HH:MM format when provided" }, 400);
+            if (!endTime || !isDateTimeValue(endTime)) {
+                return c.json({
+                    message: "Each schedule must have a valid endTime in YYYY-MM-DDTHH:MM format",
+                }, 400);
             }
+            if (Date.parse(startTime) >= Date.parse(endTime)) {
+                return c.json({ message: `${scheduleType} schedule startTime must be before endTime` }, 400);
+            }
+            normalizedSchedules.push({
+                type: scheduleType,
+                startTime,
+                endTime,
+            });
+        }
+        for (const requiredType of requiredTypes) {
+            if (!seenTypes.has(requiredType)) {
+                return c.json({
+                    message: "Schedules for entry, breakfast, lunch, and dinner are required.",
+                }, 400);
+            }
+        }
+        for (const schedule of normalizedSchedules) {
             await db
                 .insert(hackathonSchedules)
                 .values({
                 id: crypto.randomUUID(),
                 hackathonId,
-                type: scheduleType,
-                startTime: startTime ? `${finalRoundDate}T${startTime}` : null,
-                endTime: `${finalRoundDate}T${endTime}`,
+                type: schedule.type,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
             })
                 .onConflictDoUpdate({
                 target: [hackathonSchedules.hackathonId, hackathonSchedules.type],
                 set: {
-                    startTime: startTime ? `${finalRoundDate}T${startTime}` : null,
-                    endTime: `${finalRoundDate}T${endTime}`,
+                    startTime: schedule.startTime,
+                    endTime: schedule.endTime,
                 },
             });
         }

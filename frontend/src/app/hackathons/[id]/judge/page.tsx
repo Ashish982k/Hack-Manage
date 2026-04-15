@@ -565,7 +565,9 @@ export default function JudgePage() {
                         <Button
                           className="ml-auto"
                           onClick={() =>
-                            router.push(`/hackathons/${hackathonId}/evaluate/${item.teamId}`)
+                            router.push(
+                              `/hackathons/${hackathonId}/judge/evaluate/${item.teamId}?stageId=${encodeURIComponent(item.stageId)}`,
+                            )
                           }
                         >
                           Evaluate the team

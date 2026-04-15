@@ -18,7 +18,7 @@ export const saveHackathonSchedules = (
   payload: {
     schedules: Array<{
       type: "entry" | "breakfast" | "lunch" | "dinner";
-      startTime?: string;
+      startTime: string;
       endTime: string;
     }>;
   },
@@ -132,6 +132,7 @@ export const evaluateTeamSubmission = (
     presentation: number;
     impact: number;
   },
+  stageId?: string | null,
 ) => {
   const formData = new FormData();
   formData.append("innovation", String(scores.innovation));
@@ -139,9 +140,13 @@ export const evaluateTeamSubmission = (
   formData.append("technical", String(scores.technical));
   formData.append("presentation", String(scores.presentation));
   formData.append("impact", String(scores.impact));
+  const stageQuery = stageId ? `?stageId=${encode(stageId)}` : "";
 
-  return fetchFromApi(`/hackathons/${encode(hackathonId)}/evaluate/${encode(teamId)}`, {
-    method: "POST",
-    body: formData,
-  });
+  return fetchFromApi(
+    `/hackathons/${encode(hackathonId)}/evaluate/${encode(teamId)}${stageQuery}`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
 };

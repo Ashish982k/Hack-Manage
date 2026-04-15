@@ -58,7 +58,6 @@ interface ProblemStatement {
 type ScheduleType = "entry" | "breakfast" | "lunch" | "dinner";
 
 type ScheduleOption = {
-  enabled: boolean;
   startTime: string;
   endTime: string;
 };
@@ -91,10 +90,10 @@ export default function CreateHackathonPage() {
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [judgeEmails, setJudgeEmails] = useState<string[]>([]);
   const [finalRoundSchedule, setFinalRoundSchedule] = useState<ScheduleState>({
-    entry: { enabled: false, startTime: "", endTime: "" },
-    breakfast: { enabled: false, startTime: "", endTime: "" },
-    lunch: { enabled: false, startTime: "", endTime: "" },
-    dinner: { enabled: false, startTime: "", endTime: "" },
+    entry: { startTime: "", endTime: "" },
+    breakfast: { startTime: "", endTime: "" },
+    lunch: { startTime: "", endTime: "" },
+    dinner: { startTime: "", endTime: "" },
   });
 
   const [stages, setStages] = useState<Stage[]>([
@@ -132,18 +131,6 @@ export default function CreateHackathonPage() {
         stage.id === id ? { ...stage, [field]: value } : stage,
       ),
     );
-  };
-
-  const updateScheduleEnabled = (type: ScheduleType, enabled: boolean) => {
-    setFinalRoundSchedule((current) => ({
-      ...current,
-      [type]: {
-        ...current[type],
-        enabled,
-        startTime: enabled ? current[type].startTime : "",
-        endTime: enabled ? current[type].endTime : "",
-      },
-    }));
   };
 
   const updateScheduleTime = (
@@ -243,19 +230,35 @@ export default function CreateHackathonPage() {
     );
     formData.append("judges", JSON.stringify(judges));
 
-    const enabledSchedules = (
+    const requiredSchedules = (
       Object.entries(finalRoundSchedule) as Array<[ScheduleType, ScheduleOption]>
     )
-      .filter(([, schedule]) => schedule.enabled)
       .map(([type, schedule]) => ({
         type,
         startTime: schedule.startTime.trim(),
         endTime: schedule.endTime.trim(),
       }));
 
-    const invalidSchedule = enabledSchedules.find((schedule) => !schedule.endTime);
-    if (invalidSchedule) {
-      alert(`Please provide an end time for ${invalidSchedule.type}.`);
+    const missingSchedule = requiredSchedules.find(
+      (schedule) => !schedule.startTime || !schedule.endTime,
+    );
+    if (missingSchedule) {
+      alert(
+        `Please provide both start and end date-time for ${missingSchedule.type}.`,
+      );
+      return;
+    }
+
+    const invalidRangeSchedule = requiredSchedules.find(
+      (schedule) =>
+        Number.isNaN(Date.parse(schedule.startTime)) ||
+        Number.isNaN(Date.parse(schedule.endTime)) ||
+        Date.parse(schedule.startTime) >= Date.parse(schedule.endTime),
+    );
+    if (invalidRangeSchedule) {
+      alert(
+        `${invalidRangeSchedule.type} start date-time must be before end date-time.`,
+      );
       return;
     }
 
@@ -266,33 +269,31 @@ export default function CreateHackathonPage() {
         | null;
 
       if (res.ok) {
-        if (enabledSchedules.length > 0) {
-          const createdHackathonId = data?.hackathonId;
-          if (!createdHackathonId) {
-            alert("Hackathon created, but schedules could not be saved.");
-            router.push("/hackathons");
-            return;
-          }
+        const createdHackathonId = data?.hackathonId;
+        if (!createdHackathonId) {
+          alert("Hackathon created, but schedules could not be saved.");
+          router.push("/hackathons");
+          return;
+        }
 
-          const scheduleRes = await saveHackathonSchedules(createdHackathonId, {
-            schedules: enabledSchedules.map((schedule) => ({
-              type: schedule.type,
-              startTime: schedule.startTime || undefined,
-              endTime: schedule.endTime,
-            })),
-          });
+        const scheduleRes = await saveHackathonSchedules(createdHackathonId, {
+          schedules: requiredSchedules.map((schedule) => ({
+            type: schedule.type,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+          })),
+        });
 
-          if (!scheduleRes.ok) {
-            const scheduleData = (await scheduleRes.json().catch(() => null)) as
-              | { message?: string }
-              | null;
-            alert(
-              scheduleData?.message ||
-                "Hackathon created, but schedules could not be saved.",
-            );
-            router.push("/hackathons");
-            return;
-          }
+        if (!scheduleRes.ok) {
+          const scheduleData = (await scheduleRes.json().catch(() => null)) as
+            | { message?: string }
+            | null;
+          alert(
+            scheduleData?.message ||
+              "Hackathon created, but schedules could not be saved.",
+          );
+          router.push("/hackathons");
+          return;
         }
 
         alert("Hackathon created successfully!");
@@ -599,8 +600,8 @@ export default function CreateHackathonPage() {
             </CardHeader>
             <CardContent className="space-y-5 pt-2">
               <p className="text-sm text-white/60">
-                Configure optional entry and meal timings for the final round.
-                Only enabled items will be saved.
+                Set start and end date-time for all final round checkpoints.
+                These values are stored for entry, breakfast, lunch, and dinner.
               </p>
 
               {(
@@ -617,56 +618,45 @@ export default function CreateHackathonPage() {
                     key={item.key}
                     className="rounded-2xl border border-white/10 bg-white/5 p-4"
                   >
-                    <label className="flex cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={config.enabled}
-                        onChange={(e) =>
-                          updateScheduleEnabled(item.key, e.target.checked)
-                        }
-                        className="size-4 rounded border-white/20 bg-black/20 text-purple-500 focus:ring-purple-500/40"
-                      />
-                      <span className="text-sm font-semibold text-white/90">
-                        {item.label}
-                      </span>
-                    </label>
+                    <p className="text-sm font-semibold text-white/90">
+                      {item.label}
+                    </p>
 
-                    {config.enabled ? (
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                            Start Time (Optional)
-                          </label>
-                          <Input
-                            type="time"
-                            value={config.startTime}
-                            onChange={(e) =>
-                              updateScheduleTime(
-                                item.key,
-                                "startTime",
-                                e.target.value,
-                              )
-                            }
-                            className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                            End Time <span className="text-purple-400">*</span>
-                          </label>
-                          <Input
-                            type="time"
-                            value={config.endTime}
-                            onChange={(e) =>
-                              updateScheduleTime(item.key, "endTime", e.target.value)
-                            }
-                            className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                            required
-                          />
-                        </div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
+                          Start Date & Time <span className="text-purple-400">*</span>
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={config.startTime}
+                          onChange={(e) =>
+                            updateScheduleTime(
+                              item.key,
+                              "startTime",
+                              e.target.value,
+                            )
+                          }
+                          className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                          required
+                        />
                       </div>
-                    ) : null}
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
+                          End Date & Time <span className="text-purple-400">*</span>
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={config.endTime}
+                          onChange={(e) =>
+                            updateScheduleTime(item.key, "endTime", e.target.value)
+                          }
+                          className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
                 );
               })}

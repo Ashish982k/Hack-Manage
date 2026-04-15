@@ -50,6 +50,14 @@ const readMessage = (value: unknown) => {
 const readNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
+const readLeaderboardStageId = (value: unknown) =>
+  typeof value === "object" &&
+  value !== null &&
+  "stageId" in value &&
+  typeof (value as { stageId?: unknown }).stageId === "string"
+    ? ((value as { stageId: string }).stageId as string)
+    : null;
+
 const mapLeaderboardTeam = (value: unknown): LeaderboardTeam | null => {
   if (typeof value !== "object" || value === null) return null;
 
@@ -114,6 +122,9 @@ export default function JudgeLeaderboardPage() {
   const [accessDenied, setAccessDenied] = React.useState(false);
   const [noActiveStageMessage, setNoActiveStageMessage] =
     React.useState<string | null>(null);
+  const [leaderboardStageId, setLeaderboardStageId] = React.useState<string | null>(
+    null,
+  );
   const [teams, setTeams] = React.useState<LeaderboardTeam[]>([]);
   const [qualifyCountInput, setQualifyCountInput] = React.useState("0");
   const [confirmedShortlistSize, setConfirmedShortlistSize] = React.useState<
@@ -144,6 +155,7 @@ export default function JudgeLeaderboardPage() {
   const loadLeaderboard = React.useCallback(async () => {
     if (!hackathonId) {
       setError("Hackathon not found.");
+      setLeaderboardStageId(null);
       setIsLoading(false);
       return;
     }
@@ -152,6 +164,7 @@ export default function JudgeLeaderboardPage() {
     setError(null);
     setAccessDenied(false);
     setNoActiveStageMessage(null);
+    setLeaderboardStageId(null);
     setShortlistStatus(null);
 
     try {
@@ -176,11 +189,13 @@ export default function JudgeLeaderboardPage() {
         }
 
         setAccessDenied(res.status === 403);
+        setLeaderboardStageId(null);
         setTeams([]);
         setError(message ?? "Failed to load leaderboard.");
         return;
       }
 
+      setLeaderboardStageId(readLeaderboardStageId(data));
       const rows = sortByTotalScore(readLeaderboardTeams(data));
       setTeams(rows);
       setExpandedRows({});
@@ -191,6 +206,7 @@ export default function JudgeLeaderboardPage() {
       setQualifyCountInput(String(defaultShortlistSize));
       setConfirmedShortlistSize(existingQualifiedCount > 0 ? existingQualifiedCount : null);
     } catch {
+      setLeaderboardStageId(null);
       setTeams([]);
       setError("Please check your connection and try again.");
     } finally {
@@ -527,7 +543,11 @@ export default function JudgeLeaderboardPage() {
                                   size="sm"
                                   onClick={() =>
                                     router.push(
-                                      `/hackathons/${hackathonId}/evaluate/${team.teamId}`,
+                                      `/hackathons/${hackathonId}/judge/evaluate/${team.teamId}${
+                                        leaderboardStageId
+                                          ? `?stageId=${encodeURIComponent(leaderboardStageId)}`
+                                          : ""
+                                      }`,
                                     )
                                   }
                                 >

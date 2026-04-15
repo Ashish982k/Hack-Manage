@@ -74,6 +74,7 @@ const ensureParticipant = async (hackathonId: string, userId: string) => {
 export const getTeamDetails = async (c: AppContext) => {
   try {
     const teamId = c.req.param("id");
+    const stageId = c.req.query("stageId")?.trim() ?? null;
     const currentUser = c.get("user");
 
     if (!teamId) return c.json({ message: "Team not found" }, 404);
@@ -113,32 +114,39 @@ export const getTeamDetails = async (c: AppContext) => {
       return c.json({ message: "Unauthorized" }, 403);
     }
 
-    const [members, latestSubmissionRows] = await Promise.all([
+    const [members, selectedSubmission] = await Promise.all([
       db.query.teamMembers.findMany({
         where: eq(teamMembers.teamId, teamId),
         with: { user: true },
       }),
-      db
-        .select()
-        .from(submissions)
-        .where(eq(submissions.teamId, teamId))
-        .orderBy(desc(submissions.submittedAt))
-        .limit(1),
+      stageId
+        ? db.query.submissions.findFirst({
+            where: and(
+              eq(submissions.teamId, teamId),
+              eq(submissions.stageId, stageId),
+            ),
+          })
+        : db
+            .select()
+            .from(submissions)
+            .where(eq(submissions.teamId, teamId))
+            .orderBy(desc(submissions.submittedAt))
+            .limit(1)
+            .then((rows) => rows[0] ?? null),
     ]);
 
-    const latestSubmission = latestSubmissionRows[0] ?? null;
-    const previousEvaluation = latestSubmission
+    const previousEvaluation = selectedSubmission
       ? await db.query.evaluations.findFirst({
           where: and(
-            eq(evaluations.submissionId, latestSubmission.id),
+            eq(evaluations.submissionId, selectedSubmission.id),
             eq(evaluations.judgeId, currentUser.id),
           ),
         })
       : null;
 
-    const submission = latestSubmission
+    const submission = selectedSubmission
       ? {
-          ...latestSubmission,
+          ...selectedSubmission,
           previousScores: previousEvaluation
             ? {
                 innovation: previousEvaluation.innovation,

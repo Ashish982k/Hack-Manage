@@ -1,5 +1,5 @@
 import { db } from "../src/db";
-import { shortlistedTeams, hackathonSchedules, teamMembers, hackathons, stages, qrCodes, teams } from "../src/db/schema";
+import { shortlistedTeams, hackathonSchedules, teamMembers, hackathonRoles, hackathons, stages, qrCodes, teams, } from "../src/db/schema";
 import { and, eq } from "drizzle-orm";
 import crypto from "crypto";
 const getFinalStage = async (hackathonId) => {
@@ -84,4 +84,68 @@ export const generateQR = async (c) => {
         message: "QRs fetched/generated successfully",
         data: qrData,
     });
+};
+export const markQR = async (c) => {
+    const userId = c.get("user")?.id;
+    if (!userId) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+    const hackathonId = c.req.param("id");
+    const { token } = await c.req.json();
+    if (!hackathonId || !token) {
+        return c.json({ error: "Hackathon ID and token are required" }, 400);
+    }
+    const isAdmin = await db
+        .select({ role: hackathonRoles.role })
+        .from(hackathonRoles)
+        .where(and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "admin")))
+        .limit(1);
+    const isJudge = await db
+        .select({ role: hackathonRoles.role })
+        .from(hackathonRoles)
+        .where(and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "judge")))
+        .limit(1);
+    if (isJudge.length === 0 && isAdmin.length === 0) {
+        return c.json({ error: "Not a judge or admin" }, 403);
+    }
+    const qr = await db
+        .select({
+        id: qrCodes.id,
+        isUsed: qrCodes.isUsed,
+        expiresAt: qrCodes.expiresAt,
+        teamId: qrCodes.teamId,
+        type: qrCodes.type,
+    })
+        .from(qrCodes)
+        .where(and(eq(qrCodes.hackathonId, hackathonId), eq(qrCodes.token, token)))
+        .limit(1);
+    if (qr.length === 0) {
+        return c.json({ error: "QR code not found" }, 404);
+    }
+    if (isJudge.length > 0) {
+        const finalStageId = await getFinalStage(hackathonId);
+        if (!finalStageId) {
+            return c.json({ error: "Final stage not found for this hackathon" }, 404);
+        }
+        return c.json({
+            role: "judge",
+            teamId: qr[0].teamId,
+            stageId: finalStageId,
+        });
+    }
+    if (qr[0].isUsed) {
+        return c.json({ error: "QR code already used" }, 400);
+    }
+    if (new Date(qr[0].expiresAt) < new Date()) {
+        return c.json({ error: "QR code has expired" }, 400);
+    }
+    await db
+        .update(qrCodes)
+        .set({ isUsed: true })
+        .where(and(eq(qrCodes.hackathonId, hackathonId), eq(qrCodes.token, token)));
+    return c.json({
+        role: "admin",
+        message: "QR code marked as used",
+        type: qr[0].type,
+    }, 200);
 };

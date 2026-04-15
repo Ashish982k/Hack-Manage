@@ -24,15 +24,11 @@ export const getSubmissions = async (c) => {
             return c.json({ message: "Unauthorized" }, 403);
         }
         const activeStage = await db.query.stages.findFirst({
-            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "EVALUATION"), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            orderBy: [desc(sql `datetime(${stages.startTime})`)],
         });
         if (!activeStage) {
-            return c.json({ message: "No active stage" }, 400);
-        }
-        if (activeStage.type !== "EVALUATION") {
-            return c.json({
-                message: "Submissions can be judged only during an active EVALUATION stage.",
-            }, 400);
+            return c.json({ message: "No active evaluation stage" }, 400);
         }
         const submissionStages = await db.query.stages.findMany({
             where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "SUBMISSION")),
@@ -102,6 +98,7 @@ export const evaluateSubmission = async (c) => {
     try {
         const hackathonId = c.req.param("id");
         const teamId = c.req.param("teamId");
+        const stageId = c.req.query("stageId")?.trim() ?? null;
         const userId = c.get("user").id;
         if (!userId || !hackathonId || !teamId) {
             return c.json({ message: "Missing required fields" }, 400);
@@ -112,30 +109,56 @@ export const evaluateSubmission = async (c) => {
         if (!role || role.role !== "judge") {
             return c.json({ message: "Unauthorized" }, 403);
         }
-        const activeStage = await db.query.stages.findFirst({
-            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+        const activeJudgingStage = await db.query.stages.findFirst({
+            where: and(eq(stages.hackathonId, hackathonId), inArray(stages.type, ["EVALUATION", "FINAL"]), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            orderBy: [desc(sql `datetime(${stages.startTime})`)],
         });
-        if (!activeStage || activeStage.type !== "EVALUATION") {
-            return c.json({ message: "No active evaluation stage" }, 400);
+        if (!activeJudgingStage) {
+            return c.json({ message: "No active evaluation or final stage" }, 400);
         }
-        const submissionStages = await db.query.stages.findMany({
-            where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "SUBMISSION")),
-        });
-        if (submissionStages.length === 0) {
+        let submissionStageId = null;
+        if (stageId) {
+            const requestedStage = await db.query.stages.findFirst({
+                where: and(eq(stages.id, stageId), eq(stages.hackathonId, hackathonId)),
+            });
+            if (!requestedStage) {
+                return c.json({ message: "Invalid stageId for this hackathon." }, 400);
+            }
+            if (requestedStage.type === "FINAL" && activeJudgingStage.type !== "FINAL") {
+                return c.json({ message: "No active final stage" }, 400);
+            }
+            if (requestedStage.type !== "FINAL" && activeJudgingStage.type !== "EVALUATION") {
+                return c.json({ message: "No active evaluation stage" }, 400);
+            }
+            submissionStageId = requestedStage.id;
+        }
+        else if (activeJudgingStage.type === "FINAL") {
+            submissionStageId = activeJudgingStage.id;
+        }
+        else {
+            const submissionStages = await db.query.stages.findMany({
+                where: and(eq(stages.hackathonId, hackathonId), eq(stages.type, "SUBMISSION")),
+            });
+            if (submissionStages.length === 0) {
+                return c.json({ message: "No submission stage found" }, 400);
+            }
+            const evaluationStartTime = toTimestamp(activeJudgingStage.startTime);
+            const candidatesBeforeEvaluation = submissionStages.filter((stage) => toTimestamp(stage.startTime) <= evaluationStartTime);
+            const candidateStages = candidatesBeforeEvaluation.length > 0
+                ? candidatesBeforeEvaluation
+                : submissionStages;
+            const submissionStage = candidateStages.slice().sort((a, b) => {
+                const aEnd = toTimestamp(a.endTime ?? a.startTime);
+                const bEnd = toTimestamp(b.endTime ?? b.startTime);
+                return bEnd - aEnd;
+            })[0];
+            submissionStageId = submissionStage.id;
+        }
+        if (!submissionStageId) {
             return c.json({ message: "No submission stage found" }, 400);
         }
-        const evaluationStartTime = toTimestamp(activeStage.startTime);
-        const candidatesBeforeEvaluation = submissionStages.filter((stage) => toTimestamp(stage.startTime) <= evaluationStartTime);
-        const candidateStages = candidatesBeforeEvaluation.length > 0
-            ? candidatesBeforeEvaluation
-            : submissionStages;
-        const submissionStage = candidateStages.slice().sort((a, b) => {
-            const aEnd = toTimestamp(a.endTime ?? a.startTime);
-            const bEnd = toTimestamp(b.endTime ?? b.startTime);
-            return bEnd - aEnd;
-        })[0];
         const submitted = await db.query.submissions.findFirst({
-            where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, submissionStage.id)),
+            where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, submissionStageId)),
         });
         if (!submitted) {
             return c.json({ message: "No submission found for this team" }, 400);
@@ -227,7 +250,6 @@ export const fetchEvaluatedTeams = async (c) => {
     const validStages = submissionStages.filter((s) => toTimestamp(s.startTime) <= evalStart);
     const selectedStage = (validStages.length ? validStages : submissionStages).sort((a, b) => toTimestamp(b.endTime ?? b.startTime) -
         toTimestamp(a.endTime ?? a.startTime))[0];
-    // 5. Build leaderboard
     const leaderboard = await db
         .select({
         teamId: teams.id,
@@ -246,7 +268,7 @@ export const fetchEvaluatedTeams = async (c) => {
         .where(and(eq(submissions.stageId, selectedStage.id), eq(teams.hackathonId, hackathonId)))
         .groupBy(teams.id)
         .orderBy(desc(sql `AVG(${evaluations.total})`));
-    return c.json({ data: leaderboard });
+    return c.json({ stageId: selectedStage.id, data: leaderboard });
 };
 export async function getStage(db, hackathonId, type) {
     const activeStage = await db.query.stages.findFirst({

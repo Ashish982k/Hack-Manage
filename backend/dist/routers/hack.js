@@ -7,7 +7,7 @@ import { deleteHackathon } from "../controllers/admins";
 import { upload, newHackathon, getMember, getHackathonRoles, getJudgeAccess, joinHackathon, saveHackathonSchedules, updateHackathonRoles, deleteUser, } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
 import { createShortlistedTeams, evaluateSubmission, fetchEvaluatedTeams, fetchShortlistedTeams, getSubmissions } from "../controllers/judges";
-import { generateQR } from "../controllers/qr";
+import { generateQR, markQR } from "../controllers/qr";
 const Hack = new Hono();
 Hack.use("*", authMiddleware);
 Hack.post("/:id/uploads", authMiddleware, upload);
@@ -68,4 +68,5 @@ Hack.post("/:id/shortlist", authMiddleware, judgeMiddleware, createShortlistedTe
 Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
 //QR code 
 Hack.get("/:id/qr", authMiddleware, generateQR);
+Hack.post("/:id/scan", authMiddleware, markQR);
 export default Hack;

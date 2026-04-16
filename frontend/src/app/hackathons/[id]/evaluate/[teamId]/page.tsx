@@ -80,6 +80,9 @@ export default function EvaluateTeamPage({
   const searchParams = useSearchParams();
   const { id: hackathonId, teamId } = React.use(params);
   const stageId = searchParams.get("stageId");
+  const judgePanelUrl = `/hackathons/${hackathonId}/judge${
+    stageId ? `?stageId=${encodeURIComponent(stageId)}` : ""
+  }`;
   const { data: session, isPending: isSessionPending } = authClient.useSession();
 
   const [team, setTeam] = React.useState<TeamDetailsResponse["team"] | null>(null);
@@ -109,6 +112,12 @@ export default function EvaluateTeamPage({
 
     if (!session?.user?.id) {
       router.push("/login");
+      return;
+    }
+
+    if (!stageId) {
+      setIsLoading(false);
+      setError("Stage ID is required.");
       return;
     }
 
@@ -171,6 +180,14 @@ export default function EvaluateTeamPage({
   const handleEvaluate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitStatus(null);
+
+    if (!stageId) {
+      setSubmitStatus({
+        kind: "error",
+        message: "Stage ID is required.",
+      });
+      return;
+    }
 
     if (!team?.submission) {
       setSubmitStatus({
@@ -239,7 +256,7 @@ export default function EvaluateTeamPage({
 
       <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6">
         <button
-          onClick={() => router.push(`/hackathons/${hackathonId}/judge`)}
+          onClick={() => router.push(judgePanelUrl)}
           className="mb-8 flex items-center gap-2 text-sm text-white/50 hover:text-white/80"
         >
           <ArrowLeft className="size-4" />
@@ -399,7 +416,7 @@ export default function EvaluateTeamPage({
             <div className="pt-2">
               <Button
                 variant="outline"
-                onClick={() => router.push(`/hackathons/${hackathonId}/judge`)}
+                onClick={() => router.push(judgePanelUrl)}
               >
                 Return to submissions
               </Button>

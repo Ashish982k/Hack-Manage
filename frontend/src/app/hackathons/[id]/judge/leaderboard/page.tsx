@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Award,
@@ -49,14 +49,6 @@ const readMessage = (value: unknown) => {
 
 const readNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
-
-const readLeaderboardStageId = (value: unknown) =>
-  typeof value === "object" &&
-  value !== null &&
-  "stageId" in value &&
-  typeof (value as { stageId?: unknown }).stageId === "string"
-    ? ((value as { stageId: string }).stageId as string)
-    : null;
 
 const mapLeaderboardTeam = (value: unknown): LeaderboardTeam | null => {
   if (typeof value !== "object" || value === null) return null;
@@ -114,7 +106,9 @@ const formatScore = (value: number) =>
 export default function JudgeLeaderboardPage() {
   const router = useRouter();
   const params = useParams<{ id: string | string[] }>();
+  const searchParams = useSearchParams();
   const hackathonId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const stageId = searchParams.get("stageId");
   const { data: session, isPending: isSessionPending } = authClient.useSession();
 
   const [isLoading, setIsLoading] = React.useState(true);
@@ -122,9 +116,6 @@ export default function JudgeLeaderboardPage() {
   const [accessDenied, setAccessDenied] = React.useState(false);
   const [noActiveStageMessage, setNoActiveStageMessage] =
     React.useState<string | null>(null);
-  const [leaderboardStageId, setLeaderboardStageId] = React.useState<string | null>(
-    null,
-  );
   const [teams, setTeams] = React.useState<LeaderboardTeam[]>([]);
   const [qualifyCountInput, setQualifyCountInput] = React.useState("0");
   const [confirmedShortlistSize, setConfirmedShortlistSize] = React.useState<
@@ -155,8 +146,16 @@ export default function JudgeLeaderboardPage() {
   const loadLeaderboard = React.useCallback(async () => {
     if (!hackathonId) {
       setError("Hackathon not found.");
-      setLeaderboardStageId(null);
       setIsLoading(false);
+      return;
+    }
+
+    if (!stageId) {
+      setIsLoading(false);
+      setAccessDenied(false);
+      setNoActiveStageMessage(null);
+      setError("Stage ID is required.");
+      setTeams([]);
       return;
     }
 
@@ -164,11 +163,10 @@ export default function JudgeLeaderboardPage() {
     setError(null);
     setAccessDenied(false);
     setNoActiveStageMessage(null);
-    setLeaderboardStageId(null);
     setShortlistStatus(null);
 
     try {
-      const res = await fetchHackathonLeaderboard(hackathonId);
+      const res = await fetchHackathonLeaderboard(hackathonId, stageId);
 
       const data: unknown = await res.json().catch(() => null);
 
@@ -189,13 +187,11 @@ export default function JudgeLeaderboardPage() {
         }
 
         setAccessDenied(res.status === 403);
-        setLeaderboardStageId(null);
         setTeams([]);
         setError(message ?? "Failed to load leaderboard.");
         return;
       }
 
-      setLeaderboardStageId(readLeaderboardStageId(data));
       const rows = sortByTotalScore(readLeaderboardTeams(data));
       setTeams(rows);
       setExpandedRows({});
@@ -206,13 +202,12 @@ export default function JudgeLeaderboardPage() {
       setQualifyCountInput(String(defaultShortlistSize));
       setConfirmedShortlistSize(existingQualifiedCount > 0 ? existingQualifiedCount : null);
     } catch {
-      setLeaderboardStageId(null);
       setTeams([]);
       setError("Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [hackathonId]);
+  }, [hackathonId, stageId]);
 
   React.useEffect(() => {
     if (isSessionPending) return;
@@ -297,7 +292,13 @@ export default function JudgeLeaderboardPage() {
 
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
         <button
-          onClick={() => router.push(`/hackathons/${hackathonId}/judge`)}
+          onClick={() =>
+            router.push(
+              `/hackathons/${hackathonId}/judge${
+                stageId ? `?stageId=${encodeURIComponent(stageId)}` : ""
+              }`,
+            )
+          }
           className="mb-8 flex items-center gap-2 text-sm text-white/50 hover:text-white/80"
         >
           <ArrowLeft className="size-4" />
@@ -541,15 +542,15 @@ export default function JudgeLeaderboardPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() =>
+                                  onClick={() => {
+                                    if (!stageId) {
+                                      setError("Stage ID is required.");
+                                      return;
+                                    }
                                     router.push(
-                                      `/hackathons/${hackathonId}/judge/evaluate/${team.teamId}${
-                                        leaderboardStageId
-                                          ? `?stageId=${encodeURIComponent(leaderboardStageId)}`
-                                          : ""
-                                      }`,
-                                    )
-                                  }
+                                      `/hackathons/${hackathonId}/judge/evaluate/${team.teamId}?stageId=${encodeURIComponent(stageId)}`,
+                                    );
+                                  }}
                                 >
                                   <BadgeCheck className="size-4" />
                                   Review

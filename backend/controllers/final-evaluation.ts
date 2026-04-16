@@ -1,0 +1,18 @@
+import crypto from "crypto";
+import {
+  hackathonRoles,
+  teams,
+  submissions,
+  stages,
+  evaluations,
+  shortlistedTeams,
+  teamMembers,
+  qrCodes,
+} from "../src/db/schema";
+import type { HonoEnv } from "../types";
+import { eq, and, inArray, sql, desc, isNotNull, asc } from "drizzle-orm";
+import { db } from "../src/db";
+import type { Context } from "hono";
+
+
+type AppContext = Context<HonoEnv>;

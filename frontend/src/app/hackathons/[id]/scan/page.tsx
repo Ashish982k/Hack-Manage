@@ -266,13 +266,18 @@ export default function HackathonScanPage() {
             return;
           }
 
+          if (!stageId) {
+            setScanState("error");
+            setFeedback("Judge scan succeeded, but stage ID was not returned.");
+            setIsScannerActive(false);
+            return;
+          }
+
           setScanState("success");
           setFeedback("Team verified. Redirecting to final evaluation...");
           setIsScannerActive(false);
           router.push(
-            `/hackathons/${hackathonId}/judge/final/evaluate/${teamId}${
-              stageId ? `?stageId=${encodeURIComponent(stageId)}` : ""
-            }`,
+            `/hackathons/${hackathonId}/judge/final/evaluate/${teamId}?stageId=${encodeURIComponent(stageId)}`,
           );
           return;
         }

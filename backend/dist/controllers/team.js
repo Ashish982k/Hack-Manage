@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../src/db";
-import { hackathonParticipants, hackathonRoles, teamMembers, teams, hackathons, submissions, evaluations, user, } from "../src/db/schema";
+import { hackathonParticipants, hackathonRoles, teamMembers, teams, hackathons, stages, submissions, evaluations, user, } from "../src/db/schema";
 const findMembershipForHackathon = async (userId, hackathonId) => {
     const memberships = await db.query.teamMembers.findMany({
         where: eq(teamMembers.userId, userId),
@@ -39,12 +39,14 @@ const ensureParticipant = async (hackathonId, userId) => {
 export const getTeamDetails = async (c) => {
     try {
         const teamId = c.req.param("id");
-        const stageId = c.req.query("stageId")?.trim() ?? null;
+        const stageId = c.req.query("stageId")?.trim();
         const currentUser = c.get("user");
         if (!teamId)
             return c.json({ message: "Team not found" }, 404);
         if (!currentUser?.id)
             return c.json({ message: "Unauthorized" }, 401);
+        if (!stageId)
+            return c.json({ message: "Stage ID is required" }, 400);
         const team = await db.query.teams.findFirst({
             where: eq(teams.id, teamId),
         });
@@ -66,22 +68,20 @@ export const getTeamDetails = async (c) => {
         if (!isCreator && !isJudgeOrAdmin && !isTeamMember) {
             return c.json({ message: "Unauthorized" }, 403);
         }
+        const stage = await db.query.stages.findFirst({
+            where: and(eq(stages.id, stageId), eq(stages.hackathonId, team.hackathonId)),
+        });
+        if (!stage) {
+            return c.json({ message: "Stage not found for this hackathon" }, 404);
+        }
         const [members, selectedSubmission] = await Promise.all([
             db.query.teamMembers.findMany({
                 where: eq(teamMembers.teamId, teamId),
                 with: { user: true },
             }),
-            stageId
-                ? db.query.submissions.findFirst({
-                    where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, stageId)),
-                })
-                : db
-                    .select()
-                    .from(submissions)
-                    .where(eq(submissions.teamId, teamId))
-                    .orderBy(desc(submissions.submittedAt))
-                    .limit(1)
-                    .then((rows) => rows[0] ?? null),
+            db.query.submissions.findFirst({
+                where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, stageId)),
+            }),
         ]);
         const previousEvaluation = selectedSubmission
             ? await db.query.evaluations.findFirst({

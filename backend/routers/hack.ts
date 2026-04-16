@@ -15,7 +15,7 @@ import {
   hackathonRoles,
 } from "../src/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { deleteHackathon } from "../controllers/admins";
+import { deleteHackathon, getAttendance } from "../controllers/admins";
 import {
   upload,
   newHackathon,
@@ -102,5 +102,7 @@ Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
 //QR code 
 Hack.get("/:id/qr", authMiddleware, generateQR);
 Hack.post("/:id/scan", authMiddleware, markQR);
+
+Hack.get("/:id/attendance", authMiddleware, getAttendance);
 
 export default Hack;

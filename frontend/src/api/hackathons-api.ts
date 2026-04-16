@@ -80,11 +80,15 @@ export const updateHackathonRoles = (
 export const fetchJudgeAccess = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/judge-access`);
 
-export const fetchJudgeSubmissions = (hackathonId: string) =>
-  fetchFromApi(`/hackathons/${encode(hackathonId)}/submissions`);
+export const fetchJudgeSubmissions = (hackathonId: string, stageId: string) =>
+  fetchFromApi(
+    `/hackathons/${encode(hackathonId)}/submissions?stageId=${encode(stageId)}`,
+  );
 
-export const fetchHackathonLeaderboard = (hackathonId: string) =>
-  fetchFromApi(`/hackathons/${encode(hackathonId)}/leaderboard`);
+export const fetchHackathonLeaderboard = (hackathonId: string, stageId: string) =>
+  fetchFromApi(
+    `/hackathons/${encode(hackathonId)}/leaderboard?stageId=${encode(stageId)}`,
+  );
 
 export const fetchHackathonShortlistedTeams = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/shortlisted`);
@@ -101,6 +105,9 @@ export const confirmHackathonShortlist = (
 
 export const fetchHackathonQrCodes = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/qr`);
+
+export const fetchHackathonAttendance = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/attendance`);
 
 export const scanHackathonQr = (
   hackathonId: string,
@@ -132,7 +139,7 @@ export const evaluateTeamSubmission = (
     presentation: number;
     impact: number;
   },
-  stageId?: string | null,
+  stageId: string,
 ) => {
   const formData = new FormData();
   formData.append("innovation", String(scores.innovation));
@@ -140,7 +147,7 @@ export const evaluateTeamSubmission = (
   formData.append("technical", String(scores.technical));
   formData.append("presentation", String(scores.presentation));
   formData.append("impact", String(scores.impact));
-  const stageQuery = stageId ? `?stageId=${encode(stageId)}` : "";
+  const stageQuery = `?stageId=${encode(stageId)}`;
 
   return fetchFromApi(
     `/hackathons/${encode(hackathonId)}/evaluate/${encode(teamId)}${stageQuery}`,

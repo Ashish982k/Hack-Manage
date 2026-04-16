@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gavel, Loader2, QrCode, ScanLine, Trophy, Users } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
@@ -126,7 +126,9 @@ const readJudgeAccess = (value: unknown): JudgeAccessResponse | null => {
 export default function JudgePage() {
   const router = useRouter();
   const params = useParams<{ id: string | string[] }>();
+  const searchParams = useSearchParams();
   const hackathonId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const stageId = searchParams.get("stageId");
 
   const { data: session, isPending: isSessionPending } = authClient.useSession();
 
@@ -156,13 +158,18 @@ export default function JudgePage() {
 
   const fetchSubmissions = React.useCallback(async () => {
     if (!hackathonId) return;
+    if (!stageId) {
+      setError("Stage ID is required.");
+      setSubmissions([]);
+      return;
+    }
 
     setIsFetchingSubmissions(true);
     setError(null);
     setSubmissions([]);
 
     try {
-      const res = await fetchJudgeSubmissions(hackathonId);
+      const res = await fetchJudgeSubmissions(hackathonId, stageId);
       const data: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -176,7 +183,7 @@ export default function JudgePage() {
     } finally {
       setIsFetchingSubmissions(false);
     }
-  }, [hackathonId]);
+  }, [hackathonId, stageId]);
 
   const fetchShortlisted = React.useCallback(async () => {
     if (!hackathonId) return;
@@ -243,6 +250,10 @@ export default function JudgePage() {
       setShortlistedTeams([]);
 
       if (access.activeStageType === "EVALUATION") {
+        if (!stageId) {
+          setError("Stage ID is required.");
+          return;
+        }
         await fetchSubmissions();
         return;
       }
@@ -258,7 +269,7 @@ export default function JudgePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchShortlisted, fetchSubmissions, hackathonId]);
+  }, [fetchShortlisted, fetchSubmissions, hackathonId, stageId]);
 
   React.useEffect(() => {
     if (isSessionPending) return;
@@ -379,9 +390,15 @@ export default function JudgePage() {
                   {isJudge ? (
                     <Button
                       variant="outline"
-                      onClick={() =>
-                        router.push(`/hackathons/${hackathonId}/judge/leaderboard`)
-                      }
+                      onClick={() => {
+                        if (!stageId) {
+                          setError("Stage ID is required.");
+                          return;
+                        }
+                        router.push(
+                          `/hackathons/${hackathonId}/judge/leaderboard?stageId=${encodeURIComponent(stageId)}`,
+                        );
+                      }}
                     >
                       <Trophy className="size-4 text-amber-300" />
                       Leaderboard
@@ -564,11 +581,15 @@ export default function JudgePage() {
 
                         <Button
                           className="ml-auto"
-                          onClick={() =>
+                          onClick={() => {
+                            if (!stageId) {
+                              setError("Stage ID is required.");
+                              return;
+                            }
                             router.push(
-                              `/hackathons/${hackathonId}/judge/evaluate/${item.teamId}?stageId=${encodeURIComponent(item.stageId)}`,
-                            )
-                          }
+                              `/hackathons/${hackathonId}/judge/evaluate/${item.teamId}?stageId=${encodeURIComponent(stageId)}`,
+                            );
+                          }}
                         >
                           Evaluate the team
                         </Button>

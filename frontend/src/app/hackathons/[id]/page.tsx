@@ -990,6 +990,19 @@ export default function HackathonDetailPage({
                     </span>
                   </Button>
                 )}
+                {isHackathonAdmin && (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/hackathons/${hackathonId}/admin/attendance`)
+                    }
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Users className="size-4 text-emerald-300" />
+                      View Attendance
+                    </span>
+                  </Button>
+                )}
                 {canJudge && (
                   <Button
                     variant="outline"

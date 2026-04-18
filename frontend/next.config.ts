@@ -14,6 +14,16 @@ if (!frontendUrl || !backendUrl) {
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "", // optional
+        pathname: "/**",
+      },
+    ],
+  },
   env: {
     NEXT_PUBLIC_FRONTEND_URL: frontendUrl,
     NEXT_PUBLIC_BACKEND_URL: backendUrl,

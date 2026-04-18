@@ -63,6 +63,7 @@ type ScheduleOption = {
 };
 
 type ScheduleState = Record<ScheduleType, ScheduleOption>;
+type ScheduleEnabledState = Record<ScheduleType, boolean>;
 
 export default function CreateHackathonPage() {
   const router = useRouter();
@@ -94,6 +95,12 @@ export default function CreateHackathonPage() {
     breakfast: { startTime: "", endTime: "" },
     lunch: { startTime: "", endTime: "" },
     dinner: { startTime: "", endTime: "" },
+  });
+  const [enabledSchedules, setEnabledSchedules] = useState<ScheduleEnabledState>({
+    entry: true,
+    breakfast: false,
+    lunch: false,
+    dinner: false,
   });
 
   const [stages, setStages] = useState<Stage[]>([
@@ -145,6 +152,24 @@ export default function CreateHackathonPage() {
         [field]: value,
       },
     }));
+  };
+
+  const toggleSchedule = (type: Exclude<ScheduleType, "entry">) => {
+    setEnabledSchedules((current) => {
+      const nextEnabled = !current[type];
+
+      if (!nextEnabled) {
+        setFinalRoundSchedule((schedule) => ({
+          ...schedule,
+          [type]: { startTime: "", endTime: "" },
+        }));
+      }
+
+      return {
+        ...current,
+        [type]: nextEnabled,
+      };
+    });
   };
 
   const handleAddProblemStatement = () => {
@@ -230,7 +255,7 @@ export default function CreateHackathonPage() {
     );
     formData.append("judges", JSON.stringify(judges));
 
-    const requiredSchedules = (
+    const normalizedSchedules = (
       Object.entries(finalRoundSchedule) as Array<[ScheduleType, ScheduleOption]>
     )
       .map(([type, schedule]) => ({
@@ -239,17 +264,40 @@ export default function CreateHackathonPage() {
         endTime: schedule.endTime.trim(),
       }));
 
-    const missingSchedule = requiredSchedules.find(
-      (schedule) => !schedule.startTime || !schedule.endTime,
+    const entrySchedule = normalizedSchedules.find(
+      (schedule) => schedule.type === "entry",
     );
-    if (missingSchedule) {
+    if (!entrySchedule || !entrySchedule.startTime || !entrySchedule.endTime) {
       alert(
-        `Please provide both start and end date-time for ${missingSchedule.type}.`,
+        "Please provide both start and end date-time for entry.",
       );
       return;
     }
 
-    const invalidRangeSchedule = requiredSchedules.find(
+    const enabledOptionalTypes = (
+      Object.entries(enabledSchedules) as Array<[ScheduleType, boolean]>
+    )
+      .filter(([type, enabled]) => type !== "entry" && enabled)
+      .map(([type]) => type);
+
+    const missingOptionalSchedule = normalizedSchedules.find(
+      (schedule) =>
+        enabledOptionalTypes.includes(schedule.type) &&
+        (!schedule.startTime || !schedule.endTime),
+    );
+    if (missingOptionalSchedule) {
+      alert(
+        `Please provide both start and end date-time for ${missingOptionalSchedule.type}.`,
+      );
+      return;
+    }
+
+    const schedulesToValidate = normalizedSchedules.filter(
+      (schedule) =>
+        schedule.type === "entry" || enabledOptionalTypes.includes(schedule.type),
+    );
+
+    const invalidRangeSchedule = schedulesToValidate.find(
       (schedule) =>
         Number.isNaN(Date.parse(schedule.startTime)) ||
         Number.isNaN(Date.parse(schedule.endTime)) ||
@@ -261,6 +309,11 @@ export default function CreateHackathonPage() {
       );
       return;
     }
+
+    const schedulesToSave = normalizedSchedules.filter(
+      (schedule) =>
+        schedule.type === "entry" || enabledOptionalTypes.includes(schedule.type),
+    );
 
     try {
       const res = await createHackathon(formData);
@@ -277,7 +330,7 @@ export default function CreateHackathonPage() {
         }
 
         const scheduleRes = await saveHackathonSchedules(createdHackathonId, {
-          schedules: requiredSchedules.map((schedule) => ({
+          schedules: schedulesToSave.map((schedule) => ({
             type: schedule.type,
             startTime: schedule.startTime,
             endTime: schedule.endTime,
@@ -600,8 +653,8 @@ export default function CreateHackathonPage() {
             </CardHeader>
             <CardContent className="space-y-5 pt-2">
               <p className="text-sm text-white/60">
-                Set start and end date-time for all final round checkpoints.
-                These values are stored for entry, breakfast, lunch, and dinner.
+                Entry schedule is required. Breakfast, lunch, and dinner are optional.
+                Enable a checkpoint to set its own timing.
               </p>
 
               {(
@@ -613,19 +666,36 @@ export default function CreateHackathonPage() {
                 ] as const
               ).map((item) => {
                 const config = finalRoundSchedule[item.key];
+                const isRequired = item.key === "entry";
+                const isEnabled = isRequired || enabledSchedules[item.key];
                 return (
                   <div
                     key={item.key}
                     className="rounded-2xl border border-white/10 bg-white/5 p-4"
                   >
-                    <p className="text-sm font-semibold text-white/90">
-                      {item.label}
-                    </p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-white/90">
+                        {item.label}
+                      </p>
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-white/20 bg-black/20 accent-purple-500"
+                          checked={isEnabled}
+                          disabled={isRequired}
+                          onChange={() =>
+                            !isRequired && toggleSchedule(item.key)
+                          }
+                        />
+                        {isRequired ? "Required" : "Enable"}
+                      </label>
+                    </div>
 
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                          Start Date & Time <span className="text-purple-400">*</span>
+                          Start Date & Time{" "}
+                          {isEnabled ? <span className="text-purple-400">*</span> : null}
                         </label>
                         <Input
                           type="datetime-local"
@@ -638,13 +708,15 @@ export default function CreateHackathonPage() {
                             )
                           }
                           className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                          required
+                          required={isEnabled}
+                          disabled={!isEnabled}
                         />
                       </div>
 
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                          End Date & Time <span className="text-purple-400">*</span>
+                          End Date & Time{" "}
+                          {isEnabled ? <span className="text-purple-400">*</span> : null}
                         </label>
                         <Input
                           type="datetime-local"
@@ -653,7 +725,8 @@ export default function CreateHackathonPage() {
                             updateScheduleTime(item.key, "endTime", e.target.value)
                           }
                           className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                          required
+                          required={isEnabled}
+                          disabled={!isEnabled}
                         />
                       </div>
                     </div>

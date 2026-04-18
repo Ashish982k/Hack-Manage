@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { authMiddleware } from "../middleware/auth.middleware";
+import type { HonoEnv } from "../types";
 import { db } from "../src/db";
 import {
   hackathons,
@@ -14,7 +15,7 @@ import {
   user,
   hackathonRoles,
 } from "../src/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { deleteHackathon, getAttendance } from "../controllers/admins";
 import {
   upload,
@@ -28,13 +29,17 @@ import {
   deleteUser,
 } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
-import { createShortlistedTeams, evaluateSubmission, fetchEvaluatedTeams, fetchShortlistedTeams, getSubmissions } from "../controllers/judges";
+import {
+  confirmFinalWinners,
+  createShortlistedTeams,
+  evaluateSubmission,
+  fetchEvaluatedTeams,
+  fetchShortlistedTeams,
+  getSubmissions,
+} from "../controllers/judges";
 import { generateQR, markQR } from "../controllers/qr";
 
-
-const Hack = new Hono();
-
-Hack.use("*", authMiddleware);
+const Hack = new Hono<HonoEnv>();
 Hack.post("/:id/uploads", authMiddleware, upload);
 Hack.get("/:id/team", authMiddleware, getMember);
 Hack.get("/:id/roles", authMiddleware, getHackathonRoles);
@@ -72,6 +77,17 @@ Hack.get("/:id", authMiddleware, async (c) => {
       .select()
       .from(problemStatements)
       .where(eq(problemStatements.hackathonId, id));
+    const stageRows = await db
+      .select({
+        id: stages.id,
+        title: stages.title,
+        type: stages.type,
+        startTime: stages.startTime,
+        endTime: stages.endTime,
+      })
+      .from(stages)
+      .where(eq(stages.hackathonId, id))
+      .orderBy(asc(stages.startTime), asc(stages.id));
 
     return c.json({
       ...hackathon,
@@ -80,6 +96,7 @@ Hack.get("/:id", authMiddleware, async (c) => {
         title: statement.title,
         body: statement.description ?? statement.title,
       })),
+      stages: stageRows,
     });
   } catch (err) {
     console.log(err);
@@ -95,14 +112,16 @@ Hack.delete("/:id/join", authMiddleware, deleteUser);
 //judges of the hackathon
 Hack.get("/:id/submissions", authMiddleware, judgeMiddleware, getSubmissions);
 Hack.post("/:id/evaluate/:teamId", authMiddleware, judgeMiddleware, evaluateSubmission)
-Hack.get("/:id/leaderboard", authMiddleware, judgeMiddleware, fetchEvaluatedTeams);
-Hack.post("/:id/shortlist", authMiddleware, judgeMiddleware, createShortlistedTeams);
+Hack.get("/:id/leaderboard", authMiddleware, fetchEvaluatedTeams);
+Hack.post("/:id/shortlist", authMiddleware, createShortlistedTeams);
+Hack.post("/:id/final-winners", authMiddleware, confirmFinalWinners);
 Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
 
 //QR code 
 Hack.get("/:id/qr", authMiddleware, generateQR);
 Hack.post("/:id/scan", authMiddleware, markQR);
 
+//Analytics
 Hack.get("/:id/attendance", authMiddleware, getAttendance);
 
 export default Hack;

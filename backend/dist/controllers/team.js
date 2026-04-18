@@ -123,6 +123,11 @@ export const getTeamDetails = async (c) => {
                 })),
                 submission,
             },
+            stage: {
+                id: stage.id,
+                title: stage.title,
+                type: stage.type,
+            },
         });
     }
     catch {

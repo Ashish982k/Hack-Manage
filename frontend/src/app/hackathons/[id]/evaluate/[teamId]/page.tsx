@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Gavel, Loader2, Users } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
@@ -44,6 +44,11 @@ type TeamDetailsResponse = {
       } | null;
     } | null;
   };
+  stage?: {
+    id: string;
+    title: string;
+    type: "SUBMISSION" | "EVALUATION" | "FINAL";
+  };
 };
 
 const hasMessage = (value: unknown): value is { message?: string } =>
@@ -77,9 +82,11 @@ export default function EvaluateTeamPage({
   params: Promise<{ id: string; teamId: string }>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { id: hackathonId, teamId } = React.use(params);
   const stageId = searchParams.get("stageId");
+  const isFinalRoute = pathname.includes("/judge/final/evaluate/");
   const judgePanelUrl = `/hackathons/${hackathonId}/judge${
     stageId ? `?stageId=${encodeURIComponent(stageId)}` : ""
   }`;
@@ -100,6 +107,10 @@ export default function EvaluateTeamPage({
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const [stageType, setStageType] = React.useState<
+    "SUBMISSION" | "EVALUATION" | "FINAL" | null
+  >(null);
+  const isFinalStage = isFinalRoute || stageType === "FINAL";
 
   const totalScore = React.useMemo(
     () =>
@@ -149,6 +160,7 @@ export default function EvaluateTeamPage({
         }
 
         setTeam(data.team);
+        setStageType(data.stage?.type ?? null);
         if (data.team.submission?.previousScores) {
           setScores({
             innovation: String(data.team.submission.previousScores.innovation),
@@ -189,7 +201,7 @@ export default function EvaluateTeamPage({
       return;
     }
 
-    if (!team?.submission) {
+    if (!isFinalStage && !team?.submission) {
       setSubmitStatus({
         kind: "error",
         message: "No submission found for this team.",
@@ -311,52 +323,56 @@ export default function EvaluateTeamPage({
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-semibold text-white/90">Submission</p>
-                  {team.submission ? (
-                    <div className="mt-2 space-y-1 text-sm">
-                      <p>
-                        PPT:{" "}
-                        {team.submission.pptUrl ? (
-                          <a
-                            href={team.submission.pptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            Open
-                          </a>
-                        ) : (
-                          <span className="text-white/50">Not provided</span>
-                        )}
+                {!isFinalStage ? (
+                  <div>
+                    <p className="text-sm font-semibold text-white/90">Submission</p>
+                    {team.submission ? (
+                      <div className="mt-2 space-y-1 text-sm">
+                        <p>
+                          PPT:{" "}
+                          {team.submission.pptUrl ? (
+                            <a
+                              href={team.submission.pptUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-400 underline"
+                            >
+                              Open
+                            </a>
+                          ) : (
+                            <span className="text-white/50">Not provided</span>
+                          )}
+                        </p>
+                        <p>
+                          GitHub:{" "}
+                          {team.submission.githubUrl ? (
+                            <a
+                              href={team.submission.githubUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-green-400 underline"
+                            >
+                              Open
+                            </a>
+                          ) : (
+                            <span className="text-white/50">Not provided</span>
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-white/60">
+                        No submission found for this team.
                       </p>
-                      <p>
-                        GitHub:{" "}
-                        {team.submission.githubUrl ? (
-                          <a
-                            href={team.submission.githubUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-green-400 underline"
-                          >
-                            Open
-                          </a>
-                        ) : (
-                          <span className="text-white/50">Not provided</span>
-                        )}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-white/60">
-                      No submission found for this team.
-                    </p>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <div className="rounded-xl border border-white/10 bg-black/20 p-4">
                   <p className="text-sm font-semibold text-white/90">Evaluate Submission</p>
                   <p className="mt-1 text-xs text-white/60">
-                    Enter each criterion score out of 10.
+                    {isFinalStage
+                      ? "Enter final-round scores out of 10."
+                      : "Enter each criterion score out of 10."}
                   </p>
 
                   <form className="mt-4 space-y-4" onSubmit={handleEvaluate}>
@@ -373,7 +389,7 @@ export default function EvaluateTeamPage({
                             step={1}
                             value={scores[field.key]}
                             onChange={(e) => updateScore(field.key, e.target.value)}
-                            disabled={isSubmitting || !team.submission}
+                            disabled={isSubmitting}
                             placeholder="0 - 10"
                           />
                         </label>
@@ -396,12 +412,14 @@ export default function EvaluateTeamPage({
                       </p>
                     ) : null}
 
-                    <Button type="submit" disabled={isSubmitting || !team.submission}>
+                    <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? (
                         <span className="inline-flex items-center gap-2">
                           <Loader2 className="size-4 animate-spin" />
                           Submitting...
                         </span>
+                      ) : isFinalStage ? (
+                        "Submit Final Evaluation"
                       ) : (
                         "Submit Evaluation"
                       )}

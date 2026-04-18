@@ -271,18 +271,6 @@ export const qrCodes = sqliteTable("qr_codes", {
         .default(sql `CURRENT_TIMESTAMP`)
         .notNull(),
 });
-export const qrScans = sqliteTable("qr_scans", {
-    id: text("id").primaryKey(),
-    qrId: text("qr_id")
-        .notNull()
-        .references(() => qrCodes.id, { onDelete: "cascade" }),
-    scannedBy: text("scanned_by")
-        .notNull()
-        .references(() => user.id),
-    scannedAt: text("scanned_at")
-        .default(sql `CURRENT_TIMESTAMP`)
-        .notNull(),
-});
 export const shortlistedTeams = sqliteTable("shortlisted_teams", {
     id: text("id").primaryKey(),
     teamId: text("team_id")
@@ -294,7 +282,9 @@ export const shortlistedTeams = sqliteTable("shortlisted_teams", {
     stageId: text("stage_id")
         .notNull()
         .references(() => stages.id, { onDelete: "cascade" }),
-});
+}, (table) => [
+    uniqueIndex("shortlisted_team_stage_unique").on(table.teamId, table.stageId),
+]);
 /* ===================== CERTIFICATES ===================== */
 export const certificates = sqliteTable("certificates", {
     id: text("id").primaryKey(),

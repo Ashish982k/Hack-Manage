@@ -23,6 +23,44 @@ interface Hackathon {
   headerImage?: string;
 }
 
+const FALLBACK_IMAGE = "/file.svg";
+
+const resolveImageUrl = (rawPath?: string) => {
+  if (!rawPath) return FALLBACK_IMAGE;
+  const trimmed = rawPath.trim();
+  if (!trimmed) return FALLBACK_IMAGE;
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+  return buildApiAssetUrl(trimmed);
+};
+
+const normalizeHackathon = (raw: Record<string, unknown>): Hackathon | null => {
+  const id = typeof raw.id === "string" ? raw.id : "";
+  const title = typeof raw.title === "string" ? raw.title : "Untitled Hackathon";
+  const description =
+    typeof raw.description === "string" ? raw.description : "No description available.";
+  const startDate = typeof raw.startDate === "string" ? raw.startDate : "";
+  const endDate = typeof raw.endDate === "string" ? raw.endDate : "";
+  const headerImageCandidate =
+    typeof raw.headerImage === "string"
+      ? raw.headerImage
+      : typeof raw.header_url === "string"
+        ? raw.header_url
+        : "";
+
+  if (!id) return null;
+
+  return {
+    id,
+    title,
+    description,
+    startDate,
+    endDate,
+    headerImage: headerImageCandidate,
+  };
+};
+
 function Glow() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -52,8 +90,24 @@ export default function HackathonsPage() {
   useEffect(() => {
     fetchHackathonsList()
       .then((res) => res.json())
-      .then((data) => {
-        setHackathons(data.hackathons || []);
+      .then((data: unknown) => {
+        const rows =
+          typeof data === "object" &&
+          data !== null &&
+          "hackathons" in data &&
+          Array.isArray((data as { hackathons?: unknown }).hackathons)
+            ? (data as { hackathons: unknown[] }).hackathons
+            : [];
+
+        setHackathons(
+          rows
+            .map((row) =>
+              typeof row === "object" && row !== null
+                ? normalizeHackathon(row as Record<string, unknown>)
+                : null,
+            )
+            .filter((row): row is Hackathon => row !== null),
+        );
         setLoading(false);
       })
       .catch((err) => {
@@ -111,7 +165,6 @@ export default function HackathonsPage() {
     return () => ctx.revert();
   }, []);
 
-  // Cards scroll trigger animations
   useLayoutEffect(() => {
     if (loading) return;
     if (cardsAnimatedRef.current) return;
@@ -218,13 +271,10 @@ export default function HackathonsPage() {
                   {/* IMAGE */}
                   <div className="relative h-44 w-full overflow-hidden">
                     <Image
-                      src={
-                        h.headerImage
-                          ? buildApiAssetUrl(h.headerImage)
-                          : "/placeholder.jpg"
-                      }
+                      src={resolveImageUrl(h.headerImage)}
                       alt={h.title}
                       fill
+                      unoptimized
                       className="object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
@@ -242,7 +292,7 @@ export default function HackathonsPage() {
 
                   <CardContent>
                     <p className="text-sm text-white/70">
-                      {h.description.substring(0, 150) + "....."}
+                      {`${h.description.substring(0, 150)}.....`}
                     </p>
                   </CardContent>
                 </Card>

@@ -8,6 +8,20 @@
       "when": 1776020656565,
       "tag": "0000_gigantic_gorgon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776362692611,
+      "tag": "0001_condemned_zaladane",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776416000000,
+      "tag": "0002_breezy_hammerhead",
+      "breakpoints": true
     }
   ]
 }

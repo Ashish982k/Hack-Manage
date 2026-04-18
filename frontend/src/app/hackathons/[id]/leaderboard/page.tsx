@@ -1,14 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, Trophy } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchHackathonShortlistedTeams } from "@/api";
+import { fetchHackathonById, fetchHackathonShortlistedTeams } from "@/api";
 import { cn } from "@/lib/utils";
 
 type ShortlistedTeam = {
@@ -56,6 +56,39 @@ const readShortlistedTeams = (value: unknown): ShortlistedTeam[] => {
   return [];
 };
 
+const readFinalStageId = (value: unknown): string | null => {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("stages" in value) ||
+    !Array.isArray((value as { stages?: unknown }).stages)
+  ) {
+    return null;
+  }
+
+  const finalStages = (value as { stages: unknown[] }).stages
+    .map((stage) => {
+      if (typeof stage !== "object" || stage === null) return null;
+      const row = stage as Record<string, unknown>;
+      if (typeof row.id !== "string" || row.type !== "FINAL") return null;
+      return {
+        id: row.id,
+        startTime:
+          typeof row.startTime === "string" && row.startTime.trim().length > 0
+            ? row.startTime
+            : null,
+      };
+    })
+    .filter((stage): stage is { id: string; startTime: string | null } => stage !== null)
+    .sort(
+      (a, b) =>
+        (a.startTime ?? "").localeCompare(b.startTime ?? "") ||
+        a.id.localeCompare(b.id),
+    );
+
+  return finalStages[0]?.id ?? null;
+};
+
 const sortByTeamName = (teams: ShortlistedTeam[]) =>
   [...teams].sort((a, b) => a.teamName.localeCompare(b.teamName));
 
@@ -94,11 +127,14 @@ const getTopRankClasses = (rank: number) => {
 export default function PublicLeaderboardPage() {
   const router = useRouter();
   const params = useParams<{ id: string | string[] }>();
+  const searchParams = useSearchParams();
   const hackathonId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const stageId = searchParams.get("stageId");
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [teams, setTeams] = React.useState<ShortlistedTeam[]>([]);
+  const [resolvedStageId, setResolvedStageId] = React.useState<string | null>(null);
 
   const loadLeaderboard = React.useCallback(async () => {
     if (!hackathonId) {
@@ -107,16 +143,56 @@ export default function PublicLeaderboardPage() {
       setTeams([]);
       return;
     }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetchHackathonShortlistedTeams(hackathonId);
+      const hackathonRes = await fetchHackathonById(hackathonId);
+      const hackathonData: unknown = await hackathonRes.json().catch(() => null);
+      if (!hackathonRes.ok) {
+        setTeams([]);
+        setError(readMessage(hackathonData) ?? "Failed to load shortlisted teams.");
+        return;
+      }
+
+      const finalStageId = readFinalStageId(hackathonData);
+      if (!finalStageId) {
+        setTeams([]);
+        setError("Final stage is not configured for this hackathon.");
+        return;
+      }
+
+      setResolvedStageId(finalStageId);
+
+      if (!stageId || stageId !== finalStageId) {
+        setTeams([]);
+        setError("This page shows final-round shortlisted teams. Redirecting...");
+        router.replace(
+          `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(finalStageId)}`,
+        );
+        return;
+      }
+
+      const res = await fetchHackathonShortlistedTeams(hackathonId, finalStageId);
 
       const data: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
+        const suggestedStageId =
+          typeof data === "object" &&
+          data !== null &&
+          "shortlistedStageId" in data &&
+          typeof (data as { shortlistedStageId?: unknown }).shortlistedStageId ===
+            "string"
+            ? (data as { shortlistedStageId: string }).shortlistedStageId
+            : null;
+        if (suggestedStageId && suggestedStageId !== stageId) {
+          setError("Redirecting to the shortlisted stage...");
+          router.replace(
+            `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(suggestedStageId)}`,
+          );
+          return;
+        }
         setTeams([]);
         setError(readMessage(data) ?? "Failed to load shortlisted teams.");
         return;
@@ -129,7 +205,7 @@ export default function PublicLeaderboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [hackathonId]);
+  }, [hackathonId, router, stageId]);
 
   React.useEffect(() => {
     loadLeaderboard();
@@ -188,6 +264,11 @@ export default function PublicLeaderboardPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-rose-300">{error}</p>
+              {resolvedStageId ? (
+                <p className="text-xs text-white/60">
+                  Expected final stage: {resolvedStageId}
+                </p>
+              ) : null}
               <Button variant="outline" onClick={loadLeaderboard}>
                 Retry
               </Button>

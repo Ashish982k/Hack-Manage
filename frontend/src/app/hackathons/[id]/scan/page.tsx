@@ -65,6 +65,43 @@ const readString = (value: unknown, key: string): string | null =>
     ? ((value as Record<string, unknown>)[key] as string)
     : null;
 
+const readSuccess = (value: unknown): boolean | null =>
+  typeof value === "object" &&
+  value !== null &&
+  "success" in value &&
+  typeof (value as { success?: unknown }).success === "boolean"
+    ? (value as { success: boolean }).success
+    : null;
+
+const normalizeJudgeFinalRedirect = (
+  redirect: string,
+  hackathonId: string,
+  payload: Record<string, unknown> | null,
+) => {
+  const payloadTeamId = readString(payload, "teamId");
+  const payloadStageId = readString(payload, "stageId");
+
+  try {
+    const url = new URL(redirect, "http://localhost");
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const evaluateIndex = pathParts.findIndex((part) => part === "evaluate");
+    const teamIdFromPath =
+      evaluateIndex >= 0 && evaluateIndex + 1 < pathParts.length
+        ? pathParts[evaluateIndex + 1]
+        : null;
+    const stageIdFromQuery = url.searchParams.get("stageId");
+
+    const teamId = payloadTeamId ?? teamIdFromPath;
+    const stageId = payloadStageId ?? stageIdFromQuery;
+    if (!teamId) return redirect;
+
+    const finalPath = `/hackathons/${hackathonId}/judge/final/evaluate/${encodeURIComponent(teamId)}`;
+    return stageId ? `${finalPath}?stageId=${encodeURIComponent(stageId)}` : finalPath;
+  } catch {
+    return redirect;
+  }
+};
+
 const readAccess = (value: unknown): { isJudge: boolean; isAdmin: boolean } | null => {
   if (
     typeof value !== "object" ||
@@ -246,11 +283,18 @@ export default function HackathonScanPage() {
         const res = await scanHackathonQr(hackathonId, { token });
         const data: unknown = await res.json().catch(() => null);
         const payload = readPayload(data);
+        const success = readSuccess(data) ?? readSuccess(payload) ?? res.ok;
+        const redirect = readString(data, "redirect") ?? readString(payload, "redirect");
 
-        if (!res.ok) {
+        if (!success) {
           setScanState("error");
           setFeedback(mapScanError(res.status, readMessage(data) ?? readMessage(payload)));
           setIsScannerActive(false);
+          return;
+        }
+
+        if (redirect) {
+          router.push(normalizeJudgeFinalRedirect(redirect, hackathonId, payload));
           return;
         }
 
@@ -258,7 +302,7 @@ export default function HackathonScanPage() {
         const teamId = readString(payload, "teamId");
         const stageId = readString(payload, "stageId");
 
-        if (role === "judge" || (!!teamId && role !== "admin")) {
+        if (role === "judge") {
           if (!teamId) {
             setScanState("error");
             setFeedback("Judge scan succeeded, but team ID was not returned.");

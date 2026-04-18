@@ -17,7 +17,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { confirmHackathonShortlist, fetchHackathonLeaderboard } from "@/api";
+import {
+  confirmFinalWinners,
+  confirmHackathonShortlist,
+  fetchHackathonById,
+  fetchHackathonLeaderboard,
+  fetchHackathonShortlistedTeams,
+} from "@/api";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +40,8 @@ type LeaderboardTeam = {
   qualified: boolean;
 };
 
+type StageType = "SUBMISSION" | "EVALUATION" | "FINAL";
+
 const readMessage = (value: unknown) => {
   if (
     typeof value === "object" &&
@@ -47,8 +55,99 @@ const readMessage = (value: unknown) => {
   return null;
 };
 
-const readNumber = (value: unknown) =>
-  typeof value === "number" && Number.isFinite(value) ? value : null;
+const readShortlistedStageId = (value: unknown) => {
+  if (typeof value !== "object" || value === null) return null;
+  if (
+    "shortlistedStageId" in value &&
+    typeof (value as { shortlistedStageId?: unknown }).shortlistedStageId ===
+      "string"
+  ) {
+    return (value as { shortlistedStageId: string }).shortlistedStageId;
+  }
+  if (
+    "finalStageId" in value &&
+    typeof (value as { finalStageId?: unknown }).finalStageId === "string"
+  ) {
+    return (value as { finalStageId: string }).finalStageId;
+  }
+  if ("stageId" in value && typeof (value as { stageId?: unknown }).stageId === "string") {
+    return (value as { stageId: string }).stageId;
+  }
+  return null;
+};
+
+const readShortlistedCount = (value: unknown) => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "data" in value &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    return (value as { data: unknown[] }).data.length;
+  }
+  if (Array.isArray(value)) return value.length;
+  return 0;
+};
+
+const readShortlistedTeamIds = (value: unknown) => {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "data" in value &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    return new Set(
+      (value as { data: unknown[] }).data
+        .map((row) =>
+          typeof row === "object" &&
+          row !== null &&
+          "teamId" in row &&
+          typeof (row as { teamId?: unknown }).teamId === "string"
+            ? (row as { teamId: string }).teamId
+            : null,
+        )
+        .filter((teamId): teamId is string => teamId !== null),
+    );
+  }
+
+  return new Set<string>();
+};
+
+const readStageType = (value: unknown, stageId: string): StageType | null => {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("stages" in value) ||
+    !Array.isArray((value as { stages?: unknown }).stages)
+  ) {
+    return null;
+  }
+
+  const stage = (value as { stages: unknown[] }).stages.find((entry) => {
+    if (typeof entry !== "object" || entry === null) return false;
+    return (
+      "id" in entry &&
+      (entry as { id?: unknown }).id === stageId &&
+      "type" in entry &&
+      typeof (entry as { type?: unknown }).type === "string"
+    );
+  });
+
+  if (!stage) return null;
+  const stageType = (stage as { type: string }).type;
+  return stageType === "SUBMISSION" || stageType === "EVALUATION" || stageType === "FINAL"
+    ? stageType
+    : null;
+};
+
+const readNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
 
 const mapLeaderboardTeam = (value: unknown): LeaderboardTeam | null => {
   if (typeof value !== "object" || value === null) return null;
@@ -129,6 +228,14 @@ export default function JudgeLeaderboardPage() {
     kind: "success" | "error";
     message: string;
   } | null>(null);
+  const [shortlistedStageId, setShortlistedStageId] = React.useState<string | null>(
+    null,
+  );
+  const [isFinalStage, setIsFinalStage] = React.useState(false);
+  const [isShortlistLocked, setIsShortlistLocked] = React.useState(false);
+  const [confirmedShortlistedTeamIds, setConfirmedShortlistedTeamIds] = React.useState<
+    Set<string>
+  >(new Set());
 
   const sortedTeams = React.useMemo(() => sortByTotalScore(teams), [teams]);
 
@@ -193,14 +300,58 @@ export default function JudgeLeaderboardPage() {
       }
 
       const rows = sortByTotalScore(readLeaderboardTeams(data));
+      const hackathonRes = await fetchHackathonById(hackathonId);
+      const hackathonData: unknown = await hackathonRes.json().catch(() => null);
+      const currentStageType =
+        hackathonRes.ok && stageId ? readStageType(hackathonData, stageId) : null;
+      const finalMode = currentStageType === "FINAL";
+
       setTeams(rows);
       setExpandedRows({});
+      setIsFinalStage(finalMode);
 
       const existingQualifiedCount = rows.filter((team) => team.qualified).length;
       const defaultShortlistSize =
         existingQualifiedCount > 0 ? existingQualifiedCount : Math.min(3, rows.length);
       setQualifyCountInput(String(defaultShortlistSize));
       setConfirmedShortlistSize(existingQualifiedCount > 0 ? existingQualifiedCount : null);
+      setShortlistedStageId(null);
+      setIsShortlistLocked(false);
+      setConfirmedShortlistedTeamIds(new Set());
+
+      const shortlistProbeRes = await fetchHackathonShortlistedTeams(hackathonId, stageId);
+      const shortlistProbeData: unknown = await shortlistProbeRes.json().catch(() => null);
+      const resolvedShortlistStageId = readShortlistedStageId(shortlistProbeData);
+      const shortlistStageIdToLoad =
+        shortlistProbeRes.ok && !resolvedShortlistStageId ? stageId : resolvedShortlistStageId;
+
+      if (!shortlistStageIdToLoad) {
+        return;
+      }
+
+      const shortlistRes =
+        shortlistProbeRes.ok && shortlistStageIdToLoad === stageId
+          ? shortlistProbeRes
+          : await fetchHackathonShortlistedTeams(hackathonId, shortlistStageIdToLoad);
+      const shortlistData: unknown =
+        shortlistProbeRes.ok && shortlistStageIdToLoad === stageId
+          ? shortlistProbeData
+          : await shortlistRes.json().catch(() => null);
+
+      if (!shortlistRes.ok) {
+        return;
+      }
+
+      const shortlistedIds = readShortlistedTeamIds(shortlistData);
+      if (shortlistedIds.size > 0) {
+        setShortlistedStageId(shortlistStageIdToLoad);
+        setConfirmedShortlistedTeamIds(shortlistedIds);
+        setConfirmedShortlistSize(shortlistedIds.size);
+        if (!finalMode) {
+          setQualifyCountInput(String(shortlistedIds.size));
+          setIsShortlistLocked(true);
+        }
+      }
     } catch {
       setTeams([]);
       setError("Please check your connection and try again.");
@@ -238,6 +389,14 @@ export default function JudgeLeaderboardPage() {
   };
 
   const handleConfirmShortlist = async () => {
+    if (isShortlistLocked && !isFinalStage) {
+      setShortlistStatus({
+        kind: "success",
+        message: "Shortlist already confirmed.",
+      });
+      return;
+    }
+
     if (!hackathonId) {
       setShortlistStatus({
         kind: "error",
@@ -245,22 +404,70 @@ export default function JudgeLeaderboardPage() {
       });
       return;
     }
+    if (!stageId) {
+      setShortlistStatus({
+        kind: "error",
+        message: "Stage ID is required.",
+      });
+      return;
+    }
 
-    const shortlistedTeamIds = sortedTeams
-      .slice(0, shortlistSize)
-      .map((team) => team.teamId);
+    if (shortlistSize <= 0) {
+      setShortlistStatus({
+        kind: "error",
+        message: isFinalStage
+          ? "Please select at least 1 winner."
+          : "Please select at least 1 team to shortlist.",
+      });
+      return;
+    }
 
     setIsConfirmingShortlist(true);
     setShortlistStatus(null);
 
     try {
-      const res = await confirmHackathonShortlist(hackathonId, {
-        teamIds: shortlistedTeamIds,
-      });
+      const shortlistedTeamIds = sortedTeams
+        .slice(0, shortlistSize)
+        .map((team) => team.teamId);
+      const res = isFinalStage
+        ? await confirmFinalWinners(hackathonId, {
+            hackathonId,
+            finalStageId: stageId,
+            winnerCount: shortlistSize,
+          })
+        : await confirmHackathonShortlist(hackathonId, {
+            stageId,
+            teamIds: shortlistedTeamIds,
+          });
 
       const data: unknown = await res.json().catch(() => null);
+      const confirmedStageId = readShortlistedStageId(data);
 
       if (!res.ok) {
+        if (!isFinalStage && res.status === 409 && confirmedStageId) {
+          const shortlistRes = await fetchHackathonShortlistedTeams(
+            hackathonId,
+            confirmedStageId,
+          );
+          const shortlistData: unknown = await shortlistRes.json().catch(() => null);
+          const shortlistedIds = shortlistRes.ok
+            ? readShortlistedTeamIds(shortlistData)
+            : new Set<string>();
+
+          setShortlistedStageId(confirmedStageId);
+          setConfirmedShortlistedTeamIds(shortlistedIds);
+          setConfirmedShortlistSize(shortlistedIds.size);
+          if (shortlistedIds.size > 0) {
+            setQualifyCountInput(String(shortlistedIds.size));
+          }
+          setIsShortlistLocked(!isFinalStage && shortlistedIds.size > 0);
+          setShortlistStatus({
+            kind: "success",
+            message: "Shortlist already confirmed.",
+          });
+          return;
+        }
+
         setShortlistStatus({
           kind: "error",
           message: readMessage(data) ?? "Failed to confirm shortlist.",
@@ -268,13 +475,33 @@ export default function JudgeLeaderboardPage() {
         return;
       }
 
-      setConfirmedShortlistSize(shortlistSize);
+      if (!confirmedStageId) {
+        setShortlistStatus({
+          kind: "error",
+          message: "Shortlist confirmed but stage information is missing.",
+        });
+        return;
+      }
+
+      setShortlistedStageId(confirmedStageId);
+      const shortlistRes = await fetchHackathonShortlistedTeams(
+        hackathonId,
+        confirmedStageId,
+      );
+      const shortlistData: unknown = await shortlistRes.json().catch(() => null);
+      const confirmedTeamIds = shortlistRes.ok
+        ? readShortlistedTeamIds(shortlistData)
+        : new Set(shortlistedTeamIds);
+      const confirmedCount = confirmedTeamIds.size || readShortlistedCount(shortlistData);
+      setConfirmedShortlistedTeamIds(confirmedTeamIds);
+      setConfirmedShortlistSize(confirmedCount);
+      setQualifyCountInput(String(confirmedCount));
+      setIsShortlistLocked(!isFinalStage);
       setShortlistStatus({
         kind: "success",
-        message:
-          shortlistSize > 0
-            ? `Shortlist confirmed for top ${shortlistSize} team${shortlistSize === 1 ? "" : "s"}.`
-            : "Shortlist cleared successfully.",
+        message: isFinalStage
+          ? "Winners confirmed successfully"
+          : "Shortlist confirmed successfully",
       });
     } catch {
       setShortlistStatus({
@@ -396,40 +623,51 @@ export default function JudgeLeaderboardPage() {
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <label className="w-full max-w-xs space-y-2">
-                    <span className="text-sm text-white/80">Number of teams to qualify</span>
+                    <span className="text-sm text-white/80">
+                      {isFinalStage ? "Number of winners" : "Number of teams to qualify"}
+                    </span>
                     <Input
                       type="number"
                       min={0}
                       max={sortedTeams.length}
                       value={qualifyCountInput}
                       onChange={(e) => handleQualifyCountChange(e.target.value)}
+                      disabled={isShortlistLocked && !isFinalStage}
                     />
                   </label>
-                  <Button
-                    variant="primary"
-                    onClick={handleConfirmShortlist}
-                    disabled={isConfirmingShortlist}
-                  >
-                    {isConfirmingShortlist ? (
-                      <span className="inline-flex items-center gap-2">
+                  {isShortlistLocked ? (
+                    <div className="inline-flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-200">
+                      <BadgeCheck className="size-4" />
+                      {isFinalStage ? "Winners confirmed" : "Shortlist confirmed"}
+                    </div>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      onClick={handleConfirmShortlist}
+                      disabled={isConfirmingShortlist}
+                    >
+                      {isConfirmingShortlist ? (
+                        <span className="inline-flex items-center gap-2">
                         <Loader2 className="size-4 animate-spin" />
                         Confirming...
                       </span>
                     ) : (
-                      "Confirm Shortlist"
+                      isFinalStage ? "Confirm Winners" : "Confirm Shortlist"
                     )}
                   </Button>
+                )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="bg-emerald-500/15 text-emerald-200 ring-emerald-300/20">
-                    Auto-qualifying top {shortlistSize}
+                    {isFinalStage ? "Selecting winners from top" : "Auto-qualifying top"}{" "}
+                    {shortlistSize}
                   </Badge>
                   {confirmedShortlistSize !== null ? (
                     <Badge className="bg-blue-500/15 text-blue-200 ring-blue-300/20">
-                      Last confirmed: top {confirmedShortlistSize}
-                    </Badge>
-                  ) : (
+                        Last confirmed: top {confirmedShortlistSize}
+                      </Badge>
+                    ) : (
                     <Badge className="bg-white/10 text-white/70">Not confirmed yet</Badge>
                   )}
                 </div>
@@ -444,6 +682,18 @@ export default function JudgeLeaderboardPage() {
                   >
                     {shortlistStatus.message}
                   </p>
+                ) : null}
+                {shortlistedStageId ? (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(
+                        `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(shortlistedStageId)}`,
+                      )
+                    }
+                  >
+                    View Public Shortlist
+                  </Button>
                 ) : null}
               </CardContent>
             </Card>
@@ -470,7 +720,11 @@ export default function JudgeLeaderboardPage() {
                         const rank = index + 1;
                         const isTopThree = rank <= 3;
                         const isCutoff = shortlistSize > 0 && rank === shortlistSize;
-                        const isQualifying = autoQualifiedTeamIds.has(team.teamId);
+                        const isQualifying =
+                          (isShortlistLocked || isFinalStage) &&
+                          confirmedShortlistedTeamIds.size > 0
+                            ? confirmedShortlistedTeamIds.has(team.teamId)
+                            : autoQualifiedTeamIds.has(team.teamId);
                         const isExpanded = !!expandedRows[team.teamId];
 
                         return (

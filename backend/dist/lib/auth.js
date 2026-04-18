@@ -4,7 +4,6 @@ import { db } from "../src/db/index";
 import { openAPI } from "better-auth/plugins";
 import * as schema from '../src/db/schema';
 import "dotenv/config";
-console.log(process.env.GITHUB_CLIENT_ID, process.env.GITHUB_CLIENT_SECRET);
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
         provider: "sqlite",

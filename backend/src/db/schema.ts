@@ -365,37 +365,29 @@ export const qrCodes = sqliteTable("qr_codes", {
     .notNull(),
 });
 
-export const qrScans = sqliteTable("qr_scans", {
-  id: text("id").primaryKey(),
 
-  qrId: text("qr_id")
-    .notNull()
-    .references(() => qrCodes.id, { onDelete: "cascade" }),
+export const shortlistedTeams = sqliteTable(
+  "shortlisted_teams",
+  {
+    id: text("id").primaryKey(),
 
-  scannedBy: text("scanned_by")
-    .notNull()
-    .references(() => user.id),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
 
-  scannedAt: text("scanned_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
+    hackathonId: text("hackathon_id")
+      .notNull()
+      .references(() => hackathons.id, { onDelete: "cascade" }),
 
-export const shortlistedTeams = sqliteTable("shortlisted_teams", {
-  id: text("id").primaryKey(),
+    stageId: text("stage_id")
+      .notNull()
+      .references(() => stages.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("shortlisted_team_stage_unique").on(table.teamId, table.stageId),
+  ],
+);
 
-  teamId: text("team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-
-  hackathonId: text("hackathon_id")
-    .notNull()
-    .references(() => hackathons.id, { onDelete: "cascade" }),
-
-  stageId: text("stage_id")
-    .notNull()
-    .references(() => stages.id, { onDelete: "cascade" }),
-});
 
 /* ===================== CERTIFICATES ===================== */
 export const certificates = sqliteTable("certificates", {

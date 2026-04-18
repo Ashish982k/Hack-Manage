@@ -187,13 +187,17 @@ export default function JudgePage() {
 
   const fetchShortlisted = React.useCallback(async () => {
     if (!hackathonId) return;
+    if (!stageId) {
+      setShortlistedTeams([]);
+      return;
+    }
 
     setIsFetchingShortlistedTeams(true);
     setError(null);
     setShortlistedTeams([]);
 
     try {
-      const res = await fetchHackathonShortlistedTeams(hackathonId);
+      const res = await fetchHackathonShortlistedTeams(hackathonId, stageId);
       const data: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
@@ -207,7 +211,7 @@ export default function JudgePage() {
     } finally {
       setIsFetchingShortlistedTeams(false);
     }
-  }, [hackathonId]);
+  }, [hackathonId, stageId]);
 
   const loadPanel = React.useCallback(async () => {
     if (!hackathonId) {
@@ -582,12 +586,12 @@ export default function JudgePage() {
                         <Button
                           className="ml-auto"
                           onClick={() => {
-                            if (!stageId) {
+                            if (!item.stageId) {
                               setError("Stage ID is required.");
                               return;
                             }
                             router.push(
-                              `/hackathons/${hackathonId}/judge/evaluate/${item.teamId}?stageId=${encodeURIComponent(stageId)}`,
+                              `/hackathons/${hackathonId}/judge/evaluate/${item.teamId}?stageId=${encodeURIComponent(item.stageId)}`,
                             );
                           }}
                         >

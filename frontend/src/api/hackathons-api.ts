@@ -90,14 +90,29 @@ export const fetchHackathonLeaderboard = (hackathonId: string, stageId: string) 
     `/hackathons/${encode(hackathonId)}/leaderboard?stageId=${encode(stageId)}`,
   );
 
-export const fetchHackathonShortlistedTeams = (hackathonId: string) =>
-  fetchFromApi(`/hackathons/${encode(hackathonId)}/shortlisted`);
+export const fetchHackathonShortlistedTeams = (
+  hackathonId: string,
+  stageId: string,
+) =>
+  fetchFromApi(
+    `/hackathons/${encode(hackathonId)}/shortlisted?stageId=${encode(stageId)}`,
+  );
 
 export const confirmHackathonShortlist = (
   hackathonId: string,
-  payload: { teamIds: string[] },
+  payload: { stageId: string; teamIds: string[] },
 ) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/shortlist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const confirmFinalWinners = (
+  hackathonId: string,
+  payload: { hackathonId: string; finalStageId: string; winnerCount: number },
+) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/final-winners`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

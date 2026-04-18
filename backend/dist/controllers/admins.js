@@ -1,6 +1,7 @@
 import { db } from "../src/db";
-import { evaluations, hackathonParticipants, hackathonRoles, hackathons, problemStatements, shortlistedTeams, stages, submissions, teamMembers, teams, } from "../src/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { evaluations, hackathonParticipants, qrCodes, hackathonRoles, hackathons, problemStatements, shortlistedTeams, stages, submissions, teamMembers, teams, } from "../src/db/schema";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { role } from "better-auth/plugins";
 export const deleteHackathon = async (c) => {
     const id = c.req.param("id");
     const currentUser = c.get("user");
@@ -60,4 +61,36 @@ export const deleteHackathon = async (c) => {
         console.error(err);
         return c.json({ message: "Something went wrong" }, 500);
     }
+};
+export const getAttendance = async (c) => {
+    const hackathonId = c.req.param("id");
+    const userId = c.get("user")?.id;
+    if (!hackathonId) {
+        return c.json({ message: "Hackathon ID is required" }, 400);
+    }
+    if (!userId) {
+        return c.json({ message: "Unauthorized" }, 401);
+    }
+    const isAdmin = await db
+        .select({ role: hackathonRoles.role })
+        .from(hackathonRoles)
+        .where(and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "admin")))
+        .limit(1);
+    if (isAdmin.length === 0) {
+        return c.json({ message: "User is not admin" }, 403);
+    }
+    const attendance = await db
+        .select({
+        userId: qrCodes.userId,
+        teamId: qrCodes.teamId,
+        type: qrCodes.type,
+        isUsed: qrCodes.isUsed,
+        expiresAt: qrCodes.expiresAt,
+        createdAt: qrCodes.createdAt,
+    })
+        .from(qrCodes)
+        .where(eq(qrCodes.hackathonId, hackathonId));
+    return c.json({
+        data: attendance,
+    }, 200);
 };

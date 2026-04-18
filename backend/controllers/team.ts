@@ -179,6 +179,11 @@ export const getTeamDetails = async (c: AppContext) => {
         })),
         submission,
       },
+      stage: {
+        id: stage.id,
+        title: stage.title,
+        type: stage.type,
+      },
     });
   } catch {
     return c.json({ message: "Something went wrong" }, 500);

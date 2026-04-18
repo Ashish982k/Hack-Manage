@@ -110,7 +110,7 @@ export const confirmHackathonShortlist = (
 
 export const confirmFinalWinners = (
   hackathonId: string,
-  payload: { hackathonId: string; finalStageId: string; winnerCount: number },
+  payload: { finalStageId: string; winnerCount: number },
 ) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/final-winners`, {
     method: "POST",

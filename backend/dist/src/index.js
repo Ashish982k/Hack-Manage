@@ -2,15 +2,11 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { auth } from "../lib/auth";
 import { cors } from "hono/cors";
-import { authMiddleware } from "../middleware/auth.middleware";
-import { writeFile } from "fs/promises";
-import path from "path";
 import { db } from "./db";
 import Teams from "../routers/team";
 import Hack from "../routers/hack";
-import { teamMembers, hackathonParticipants, submissions, hackathons, teams, user, stages, problemStatements, shortlistedTeams, evaluations, } from "./db/schema";
-import { eq, inArray } from "drizzle-orm";
-import { upload, newHackathon, getMember, joinHackathon, deleteUser, } from "../controllers/Hackathon";
+import { user } from "./db/schema";
+import { eq } from "drizzle-orm";
 import { serveStatic } from "@hono/node-server/serve-static";
 const app = new Hono();
 app.use("*", cors({
@@ -23,11 +19,11 @@ app.use("/images/*", serveStatic({
     root: "./",
 }));
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
-//Route for hackathon
+// Hackathon routes
 app.route("/hackathons", Hack);
-//Route for teams
+// Team routes
 app.route("/teams", Teams);
-//Check for valid email
+// Check if email exists
 app.get("/users/check", async (c) => {
     const email = c.req.query("email");
     if (!email)

@@ -1,7 +1,13 @@
 "use client";
 import * as React from "react";
 
-export const Icon = ({ session }: { session: any }) => {
+type SessionLike = {
+  user?: {
+    image?: string | null;
+  } | null;
+} | null;
+
+export const Icon = ({ session }: { session: SessionLike }) => {
   const [imgError, setImgError] = React.useState(false);
 
   const handleImageError = () => {

@@ -8,7 +8,7 @@ import {
   qrCodes,
   teams,
 } from "../src/db/schema";
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { HonoEnv } from "../types";
 import type { Context } from "hono";
 import crypto from "crypto";
@@ -76,7 +76,11 @@ export const generateQR = async (c: AppContext) => {
     .from(hackathonSchedules)
     .where(eq(hackathonSchedules.hackathonId, hackathonId));
 
-  const qrData: any[] = [];
+  const qrData: Array<{
+    type: "entry" | "breakfast" | "lunch" | "dinner";
+    token: string;
+    expiresAt: string;
+  }> = [];
 
   for (const schedule of schedules) {
     const existing = await db.query.qrCodes.findFirst({
@@ -89,7 +93,11 @@ export const generateQR = async (c: AppContext) => {
     });
 
     if (existing) {
-      qrData.push(existing);
+      qrData.push({
+        type: existing.type,
+        token: existing.token,
+        expiresAt: existing.expiresAt,
+      });
       continue;
     }
 
@@ -143,7 +151,6 @@ export const markQR = async (c: AppContext) => {
   });
 
   const role = roleData?.role || "participant";
-
 
   if (role === "judge") {
     const finalStage = await resolveFinalStage(hackathonId);

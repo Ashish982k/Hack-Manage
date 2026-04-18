@@ -8,6 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
 import { buildApiAssetUrl } from "@/api";
 
+type HackathonCard = {
+  id: string;
+  title: string;
+  description: string;
+  headerImg: string;
+  startdate: string;
+  enddate: string;
+};
+
 function Glow() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -18,7 +27,11 @@ function Glow() {
   );
 }
 
-export default function HackathonsClient({ hackathons }: any) {
+export default function HackathonsClient({
+  hackathons,
+}: {
+  hackathons: HackathonCard[];
+}) {
   const router = useRouter();
 
   return (
@@ -60,37 +73,37 @@ export default function HackathonsClient({ hackathons }: any) {
 
         {/* GRID */}
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {hackathons.map((h: any) => (
+          {hackathons.map((hackathon) => (
             <button
-              key={h.id}
-              onClick={() => router.push(`/hackathons/${h.id}`)}
+              key={hackathon.id}
+              onClick={() => router.push(`/hackathons/${hackathon.id}`)}
               className="text-left"
             >
               <Card className="group h-full overflow-hidden transition hover:border-white/20 hover:bg-white/10">
                 {/* IMAGE */}
                 <div className="relative h-44 w-full overflow-hidden">
                   <img
-                    src={buildApiAssetUrl(`images/${h.headerImg}`)}
-                    alt={h.title}
+                    src={buildApiAssetUrl(`images/${hackathon.headerImg}`)}
+                    alt={hackathon.title}
                     className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
                   />
                 </div>
 
                 {/* HEADER */}
                 <CardHeader className="space-y-2">
-                  <CardTitle>{h.title}</CardTitle>
+                  <CardTitle>{hackathon.title}</CardTitle>
 
                   <div className="flex items-center gap-2 text-xs text-white/60">
                     <Calendar className="size-4" />
                     <span>
-                      {h.startdate} → {h.enddate}
+                      {hackathon.startdate} → {hackathon.enddate}
                     </span>
                   </div>
                 </CardHeader>
 
                 {/* CONTENT */}
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-white/70">{h.description}</p>
+                  <p className="text-sm text-white/70">{hackathon.description}</p>
 
                   <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
                     <span className="text-sm font-medium text-white/80">

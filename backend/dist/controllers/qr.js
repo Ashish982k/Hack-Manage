@@ -1,6 +1,6 @@
 import { db } from "../src/db";
 import { shortlistedTeams, hackathonSchedules, teamMembers, hackathonRoles, stages, qrCodes, teams, } from "../src/db/schema";
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import crypto from "crypto";
 const resolveFinalStage = async (hackathonId) => {
     return db.query.stages.findFirst({
@@ -46,7 +46,11 @@ export const generateQR = async (c) => {
             where: and(eq(qrCodes.hackathonId, hackathonId), eq(qrCodes.userId, userId), eq(qrCodes.teamId, shortlisted.teamId), eq(qrCodes.type, schedule.type)),
         });
         if (existing) {
-            qrData.push(existing);
+            qrData.push({
+                type: existing.type,
+                token: existing.token,
+                expiresAt: existing.expiresAt,
+            });
             continue;
         }
         const token = crypto.randomBytes(32).toString("hex");

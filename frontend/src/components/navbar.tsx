@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Crown } from "lucide-react";
 
@@ -16,7 +17,7 @@ function Container({ children }: { children: React.ReactNode }) {
 
 export function Navbar() {
   const router = useRouter();
-  const { data: session, isPending, error, refetch } = authClient.useSession();
+  const { data: session } = authClient.useSession();
 
   const handleSignOut = async () => {
     await authClient.signOut({
@@ -46,14 +47,14 @@ export function Navbar() {
     <div className="sticky top-0 font-bold z-40 border-b border-white/10 bg-black/30 backdrop-blur-xl">
       <Container>
         <div className="flex h-16 items-center justify-between">
-          <a href="/" className="flex items-center gap-2 text-white">
+          <Link href="/" className="flex items-center gap-2 text-white">
             <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/60 via-pink-500/40 to-blue-500/50 shadow-[0_0_0_1px_rgba(255,255,255,0.10)]">
               <Crown className="size-4" />
             </span>
             <span className="text-sm font-bold tracking-wide">
               HackathonX
             </span>
-          </a>
+          </Link>
 
           <nav className="hidden items-center gap-7 md:flex">
             {links.map((l) => (
@@ -87,7 +88,7 @@ export function Navbar() {
                   variant="ghost"
                   size="sm"
                   className="hidden sm:inline-flex"
-                  onClick={() => handleSignOut()}
+                  onClick={handleSignOut}
                 >
                   Sign Out
                 </Button>

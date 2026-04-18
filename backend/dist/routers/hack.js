@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { db } from "../src/db";
-import { hackathons, problemStatements, teams, submissions, teamMembers, shortlistedTeams, hackathonParticipants, stages, evaluations, user, hackathonRoles, } from "../src/db/schema";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { hackathons, problemStatements, stages } from "../src/db/schema";
+import { asc, eq } from "drizzle-orm";
 import { deleteHackathon, getAttendance } from "../controllers/admins";
 import { upload, newHackathon, getMember, getHackathonRoles, getJudgeAccess, joinHackathon, saveHackathonSchedules, updateHackathonRoles, deleteUser, } from "../controllers/Hackathon";
 import { judgeMiddleware } from "../middleware/judge.middleware";
@@ -71,16 +71,16 @@ Hack.get("/:id", authMiddleware, async (c) => {
 Hack.delete("/:id", authMiddleware, deleteHackathon);
 Hack.post("/:id/join", authMiddleware, joinHackathon);
 Hack.delete("/:id/join", authMiddleware, deleteUser);
-//judges of the hackathon
+// Judges
 Hack.get("/:id/submissions", authMiddleware, judgeMiddleware, getSubmissions);
 Hack.post("/:id/evaluate/:teamId", authMiddleware, judgeMiddleware, evaluateSubmission);
 Hack.get("/:id/leaderboard", authMiddleware, fetchEvaluatedTeams);
 Hack.post("/:id/shortlist", authMiddleware, createShortlistedTeams);
 Hack.post("/:id/final-winners", authMiddleware, confirmFinalWinners);
 Hack.get("/:id/shortlisted", authMiddleware, fetchShortlistedTeams);
-//QR code 
+// QR
 Hack.get("/:id/qr", authMiddleware, generateQR);
 Hack.post("/:id/scan", authMiddleware, markQR);
-//Analytics
+// Analytics
 Hack.get("/:id/attendance", authMiddleware, getAttendance);
 export default Hack;

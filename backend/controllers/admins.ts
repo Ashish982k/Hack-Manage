@@ -13,8 +13,7 @@ import {
   teamMembers,
   teams,
 } from "../src/db/schema";
-import { and, eq, inArray, or } from "drizzle-orm";
-import { role } from "better-auth/plugins";
+import { and, eq, inArray } from "drizzle-orm";
 
 export const deleteHackathon = async (c: Context) => {
   const id = c.req.param("id");
@@ -124,7 +123,7 @@ export const getAttendance = async (c: Context) => {
     .limit(1);
 
   if (isAdmin.length === 0) {
-    return c.json({ message: "User is not admin" }, 403);
+    return c.json({ message: "Unauthorized" }, 403);
   }
 
   const attendance = await db
@@ -139,7 +138,5 @@ export const getAttendance = async (c: Context) => {
     .from(qrCodes)
     .where(eq(qrCodes.hackathonId, hackathonId));
 
-  return c.json({
-    data: attendance,
-  }, 200);
+  return c.json({ data: attendance }, 200);
 };

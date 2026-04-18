@@ -1,7 +1,6 @@
 import { db } from "../src/db";
 import { evaluations, hackathonParticipants, qrCodes, hackathonRoles, hackathons, problemStatements, shortlistedTeams, stages, submissions, teamMembers, teams, } from "../src/db/schema";
-import { and, eq, inArray, or } from "drizzle-orm";
-import { role } from "better-auth/plugins";
+import { and, eq, inArray } from "drizzle-orm";
 export const deleteHackathon = async (c) => {
     const id = c.req.param("id");
     const currentUser = c.get("user");
@@ -77,7 +76,7 @@ export const getAttendance = async (c) => {
         .where(and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "admin")))
         .limit(1);
     if (isAdmin.length === 0) {
-        return c.json({ message: "User is not admin" }, 403);
+        return c.json({ message: "Unauthorized" }, 403);
     }
     const attendance = await db
         .select({
@@ -90,7 +89,5 @@ export const getAttendance = async (c) => {
     })
         .from(qrCodes)
         .where(eq(qrCodes.hackathonId, hackathonId));
-    return c.json({
-        data: attendance,
-    }, 200);
+    return c.json({ data: attendance }, 200);
 };

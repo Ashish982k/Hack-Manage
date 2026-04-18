@@ -902,7 +902,7 @@ export default function HackathonDetailPage({
       } else {
         setToast({ kind: "error", title: "Failed to delete" });
       }
-    } catch (err) {
+    } catch {
       setToast({ kind: "error", title: "Error deleting hackathon" });
     }
   };
@@ -1369,7 +1369,7 @@ export default function HackathonDetailPage({
         });
 
         await fetchTeam();
-      } catch (err) {
+      } catch {
         setToast({
           kind: "error",
           title: "Action Failed",
@@ -1400,7 +1400,7 @@ export default function HackathonDetailPage({
         title: "Joined hackathon",
         message: "Create your team to start submitting.",
       });
-    } catch (err) {
+    } catch {
       setToast({
         kind: "error",
         title: "Action Failed",

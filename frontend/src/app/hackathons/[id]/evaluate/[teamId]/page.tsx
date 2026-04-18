@@ -432,12 +432,25 @@ export default function EvaluateTeamPage({
             )}
 
             <div className="pt-2">
-              <Button
-                variant="outline"
-                onClick={() => router.push(judgePanelUrl)}
-              >
-                Return to submissions
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {stageId ? (
+                  <Button
+                    onClick={() =>
+                      router.push(
+                        `/hackathons/${hackathonId}/judge/confirm-shortlist?stageId=${encodeURIComponent(stageId)}`,
+                      )
+                    }
+                  >
+                    Go to Confirm Shortlist
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(judgePanelUrl)}
+                >
+                  Return to submissions
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

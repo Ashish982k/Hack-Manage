@@ -366,6 +366,7 @@ export const shortlistedTeams = sqliteTable(
 
 
 /* ===================== CERTIFICATES ===================== */
+
 export const hackathonSchedules = sqliteTable(
   "hackathon_schedules",
   {

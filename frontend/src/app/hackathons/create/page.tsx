@@ -1,83 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Upload,
-  Plus,
-  Trash2,
-  Clock3,
-  MapPin,
-  Calendar as CalendarIcon,
-  FileText,
-  Info,
-  Layers,
-  Sparkles,
-  Image as ImageIcon,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/navbar";
-import { MultiEmailInput } from "@/components/multi-email-input";
 import { authClient } from "@/lib/auth-client";
 import { normalizeEmail } from "@/lib/email-list";
 import { createHackathon, saveHackathonSchedules } from "@/api";
 
-function PageGlow() {
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-    >
-      <div className="absolute left-1/2 top-[-140px] h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/30 via-pink-500/20 to-blue-500/20 blur-3xl opacity-70" />
-      <div className="absolute left-[-180px] top-[440px] h-[440px] w-[440px] rounded-full bg-gradient-to-br from-blue-500/15 via-purple-500/15 to-pink-500/15 blur-3xl opacity-70" />
-      <div className="absolute right-[-100px] bottom-[-200px] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-pink-500/10 via-purple-500/10 to-blue-500/10 blur-3xl opacity-70" />
-    </div>
-  );
-}
-
-interface Stage {
-  id: string;
-  title: string;
-  type: "SUBMISSION" | "EVALUATION" | "FINAL";
-  startDate: string;
-  endDate: string;
-  description: string;
-}
-
-interface ProblemStatement {
-  id: string;
-  title: string;
-  description: string;
-}
-
-type ScheduleType = "entry" | "breakfast" | "lunch" | "dinner";
-
-type ScheduleOption = {
-  startTime: string;
-  endTime: string;
-};
-
-type ScheduleState = Record<ScheduleType, ScheduleOption>;
-type ScheduleEnabledState = Record<ScheduleType, boolean>;
+import { AccessRolesSection } from "./_components/access-roles-section";
+import { BasicDetailsSection } from "./_components/basic-details-section";
+import { FinalRoundScheduleSection } from "./_components/final-round-schedule-section";
+import { PageGlow } from "./_components/page-glow";
+import { ProblemDetailsSection } from "./_components/problem-details-section";
+import { StagesSection } from "./_components/stages-section";
+import type {
+  ProblemStatement,
+  ScheduleEnabledState,
+  ScheduleOption,
+  ScheduleState,
+  ScheduleType,
+  Stage,
+} from "./_lib/types";
 
 export default function CreateHackathonPage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
 
-  // Basic Information
-  const [title, setTitle] = useState("");
-  const [location, setLocation] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [registrationDeadline, setRegistrationDeadline] = useState("");
-  // Text Areas
-  const [description, setDescription] = useState("");
-  const [problemStatements, setProblemStatements] = useState<
+  const [title, setTitle] = React.useState("");
+  const [location, setLocation] = React.useState("");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
+  const [registrationDeadline, setRegistrationDeadline] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [problemStatements, setProblemStatements] = React.useState<
     ProblemStatement[]
   >([
     {
@@ -87,23 +45,24 @@ export default function CreateHackathonPage() {
     },
   ]);
 
-  const [headerImage, setHeaderImage] = useState<File | null>(null);
-  const [adminEmails, setAdminEmails] = useState<string[]>([]);
-  const [judgeEmails, setJudgeEmails] = useState<string[]>([]);
-  const [finalRoundSchedule, setFinalRoundSchedule] = useState<ScheduleState>({
+  const [headerImage, setHeaderImage] = React.useState<File | null>(null);
+  const [adminEmails, setAdminEmails] = React.useState<string[]>([]);
+  const [judgeEmails, setJudgeEmails] = React.useState<string[]>([]);
+  const [finalRoundSchedule, setFinalRoundSchedule] = React.useState<ScheduleState>({
     entry: { startTime: "", endTime: "" },
     breakfast: { startTime: "", endTime: "" },
     lunch: { startTime: "", endTime: "" },
     dinner: { startTime: "", endTime: "" },
   });
-  const [enabledSchedules, setEnabledSchedules] = useState<ScheduleEnabledState>({
-    entry: true,
-    breakfast: false,
-    lunch: false,
-    dinner: false,
-  });
+  const [enabledSchedules, setEnabledSchedules] =
+    React.useState<ScheduleEnabledState>({
+      entry: true,
+      breakfast: false,
+      lunch: false,
+      dinner: false,
+    });
 
-  const [stages, setStages] = useState<Stage[]>([
+  const [stages, setStages] = React.useState<Stage[]>([
     {
       id: "1",
       title: "Registration & Idea Submission",
@@ -201,14 +160,14 @@ export default function CreateHackathonPage() {
     );
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setHeaderImage(e.target.files[0]);
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setHeaderImage(event.target.files[0]);
     }
   };
 
-  const handleSubmit = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.SyntheticEvent) => {
+    event.preventDefault();
 
     const formData = new FormData();
     const creatorEmail = normalizeEmail(session?.user?.email ?? "");
@@ -235,12 +194,12 @@ export default function CreateHackathonPage() {
       formData.append("headerImage", headerImage);
     }
 
-    const formattedStages = stages.map((s) => ({
-      title: s.title,
-      type: s.type,
-      startDate: s.startDate,
-      endDate: s.endDate,
-      description: s.description,
+    const formattedStages = stages.map((stage) => ({
+      title: stage.title,
+      type: stage.type,
+      startDate: stage.startDate,
+      endDate: stage.endDate,
+      description: stage.description,
     }));
 
     formData.append("stages", JSON.stringify(formattedStages));
@@ -257,20 +216,17 @@ export default function CreateHackathonPage() {
 
     const normalizedSchedules = (
       Object.entries(finalRoundSchedule) as Array<[ScheduleType, ScheduleOption]>
-    )
-      .map(([type, schedule]) => ({
-        type,
-        startTime: schedule.startTime.trim(),
-        endTime: schedule.endTime.trim(),
-      }));
+    ).map(([type, schedule]) => ({
+      type,
+      startTime: schedule.startTime.trim(),
+      endTime: schedule.endTime.trim(),
+    }));
 
     const entrySchedule = normalizedSchedules.find(
       (schedule) => schedule.type === "entry",
     );
     if (!entrySchedule || !entrySchedule.startTime || !entrySchedule.endTime) {
-      alert(
-        "Please provide both start and end date-time for entry.",
-      );
+      alert("Please provide both start and end date-time for entry.");
       return;
     }
 
@@ -367,7 +323,7 @@ export default function CreateHackathonPage() {
 
       <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6">
         <button
-          onClick={() => router.push(`/hackathons`)}
+          onClick={() => router.push("/hackathons")}
           className="mb-8 flex items-center gap-2 text-sm text-white/50 transition hover:text-white/80"
         >
           <ArrowLeft className="size-4" />
@@ -388,494 +344,51 @@ export default function CreateHackathonPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* SECTION 1: BASIC DETAILS */}
-          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                <Info className="size-5 text-blue-400" />
-                <CardTitle className="text-xl text-white font-semibold">
-                  1. Basic Details
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-2">
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-white/90">
-                  Hackathon Title <span className="text-purple-500">*</span>
-                </label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. CodeFest 2026"
-                  className="bg-black/20 border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
-                  required
-                />
-              </div>
+          <BasicDetailsSection
+            title={title}
+            onTitleChange={setTitle}
+            headerImage={headerImage}
+            onImageChange={handleImageChange}
+            location={location}
+            onLocationChange={setLocation}
+            registrationDeadline={registrationDeadline}
+            onRegistrationDeadlineChange={setRegistrationDeadline}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
+          />
 
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-white/90">
-                  Header Image <span className="text-white/50">(Optional)</span>
-                </label>
-                <div className="relative flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/20 p-8 hover:bg-white/5 hover:border-white/30 transition">
-                  <input
-                    type="file"
-                    className="absolute inset-0 cursor-pointer opacity-0"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
-                  {headerImage ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <ImageIcon className="size-8 text-emerald-400" />
-                      <p className="text-sm font-medium text-white">
-                        {headerImage.name}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-white/50">
-                      <Upload className="size-8" />
-                      <p className="text-sm">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-white/30">
-                        SVG, PNG, JPG or GIF (max. 5MB)
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <StagesSection
+            stages={stages}
+            onAddStage={handleAddStage}
+            onRemoveStage={handleRemoveStage}
+            onUpdateStage={updateStage}
+          />
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                    <MapPin className="size-4 text-white/50" />
-                    Location
-                  </label>
-                  <Input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Remote, or VJTI Mumbai"
-                    className="bg-black/20 border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                    <CalendarIcon className="size-4 text-white/50" />
-                    Registration Deadline{" "}
-                    <span className="text-purple-500">*</span>
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={registrationDeadline}
-                    onChange={(e) => setRegistrationDeadline(e.target.value)}
-                    className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                    required
-                  />
-                </div>
-              </div>
+          <FinalRoundScheduleSection
+            finalRoundSchedule={finalRoundSchedule}
+            enabledSchedules={enabledSchedules}
+            onToggleSchedule={toggleSchedule}
+            onUpdateScheduleTime={updateScheduleTime}
+          />
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                    <CalendarIcon className="size-4 text-white/50" />
-                    Start Date <span className="text-purple-500">*</span>
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                    required
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold text-white/90 flex items-center gap-2">
-                    <CalendarIcon className="size-4 text-white/50" />
-                    End Date <span className="text-purple-500">*</span>
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                    required
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <AccessRolesSection
+            adminEmails={adminEmails}
+            onAdminEmailsChange={setAdminEmails}
+            judgeEmails={judgeEmails}
+            onJudgeEmailsChange={setJudgeEmails}
+          />
 
-          {/* SECTION 2: STAGES & TIMELINES */}
-          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
-            <CardHeader className="pb-4">
-              <div className="flex border-b border-white/10 items-center justify-between pb-4">
-                <div className="flex items-center gap-3">
-                  <Layers className="size-5 text-pink-400" />
-                  <CardTitle className="text-xl text-white font-semibold">
-                    2. Stages & Timelines
-                  </CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="relative border-l border-white/10 ml-4 space-y-8 pb-4">
-                {stages.map((stage) => (
-                  <div key={stage.id} className="relative pl-8">
-                    {/* Timeline Node */}
-                    <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-black ring-2 ring-white/10">
-                      <span className="size-2.5 rounded-full bg-pink-500" />
-                    </span>
+          <ProblemDetailsSection
+            problemStatements={problemStatements}
+            onAddProblemStatement={handleAddProblemStatement}
+            onRemoveProblemStatement={handleRemoveProblemStatement}
+            onUpdateProblemStatement={updateProblemStatement}
+            description={description}
+            onDescriptionChange={setDescription}
+          />
 
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 relative group">
-                      {stages.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => handleRemoveStage(stage.id)}
-                          className="absolute right-3 top-3 px-2 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                            Stage Title
-                          </label>
-                          <Input
-                            value={stage.title}
-                            onChange={(e) =>
-                              updateStage(stage.id, "title", e.target.value)
-                            }
-                            placeholder="e.g. Round 1 - Ideation Phase"
-                            className="bg-black/20 border-white/10 text-white font-medium focus-visible:ring-pink-500/40 rounded-xl"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                            Stage Type
-                          </label>
-                          <select
-                            value={stage.type}
-                            onChange={(e) =>
-                              updateStage(stage.id, "type", e.target.value)
-                            }
-                            className="block w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-                          >
-                            <option value="SUBMISSION">Submission</option>
-                            <option value="EVALUATION">Evaluation</option>
-                            <option value="FINAL">Final</option>
-                          </select>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div>
-                            <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                              Start Time
-                            </label>
-                            <Input
-                              type="datetime-local"
-                              value={stage.startDate}
-                              onChange={(e) =>
-                                updateStage(
-                                  stage.id,
-                                  "startDate",
-                                  e.target.value,
-                                )
-                              }
-                              className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                              End Time
-                            </label>
-                            <Input
-                              type="datetime-local"
-                              value={stage.endDate}
-                              onChange={(e) =>
-                                updateStage(stage.id, "endDate", e.target.value)
-                              }
-                              className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                            Description
-                          </label>
-                          <textarea
-                            value={stage.description}
-                            onChange={(e) =>
-                              updateStage(
-                                stage.id,
-                                "description",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Detail what participants need to do in this stage..."
-                            className="block w-full min-h-20 resize-y rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pl-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddStage}
-                  className="rounded-xl border-dashed border-white/20 text-white/70 hover:text-white"
-                >
-                  <Plus className="mr-2 size-4" />
-                  Add Another Stage
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* SECTION 3: FINAL ROUND SCHEDULE */} 
-          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                <Clock3 className="size-5 text-amber-300" />
-                <CardTitle className="text-xl font-semibold text-white">
-                  3. Final Round Schedule
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5 pt-2">
-              <p className="text-sm text-white/60">
-                Entry schedule is required. Breakfast, lunch, and dinner are optional.
-                Enable a checkpoint to set its own timing.
-              </p>
-
-              {(
-                [
-                  { key: "entry", label: "Entry" },
-                  { key: "breakfast", label: "Breakfast" },
-                  { key: "lunch", label: "Lunch" },
-                  { key: "dinner", label: "Dinner" },
-                ] as const
-              ).map((item) => {
-                const config = finalRoundSchedule[item.key];
-                const isRequired = item.key === "entry";
-                const isEnabled = isRequired || enabledSchedules[item.key];
-                return (
-                  <div
-                    key={item.key}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-white/90">
-                        {item.label}
-                      </p>
-                      <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border-white/20 bg-black/20 accent-purple-500"
-                          checked={isEnabled}
-                          disabled={isRequired}
-                          onChange={() =>
-                            !isRequired && toggleSchedule(item.key)
-                          }
-                        />
-                        {isRequired ? "Required" : "Enable"}
-                      </label>
-                    </div>
-
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                          Start Date & Time{" "}
-                          {isEnabled ? <span className="text-purple-400">*</span> : null}
-                        </label>
-                        <Input
-                          type="datetime-local"
-                          value={config.startTime}
-                          onChange={(e) =>
-                            updateScheduleTime(
-                              item.key,
-                              "startTime",
-                              e.target.value,
-                            )
-                          }
-                          className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                          required={isEnabled}
-                          disabled={!isEnabled}
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/50">
-                          End Date & Time{" "}
-                          {isEnabled ? <span className="text-purple-400">*</span> : null}
-                        </label>
-                        <Input
-                          type="datetime-local"
-                          value={config.endTime}
-                          onChange={(e) =>
-                            updateScheduleTime(item.key, "endTime", e.target.value)
-                          }
-                          className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
-                          required={isEnabled}
-                          disabled={!isEnabled}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* SECTION 4: HACKATHON ACCESS / ROLES */}
-          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                <Users className="size-5 text-emerald-400" />
-                  <CardTitle className="text-xl font-semibold text-white">
-                    4. Hackathon Access / Roles
-                  </CardTitle>
-                </div>
-              </CardHeader>
-            <CardContent className="space-y-6 pt-2">
-              <p className="text-sm text-white/60">
-                Add users who can help manage and evaluate this hackathon. Your
-                account is automatically included as an admin.
-              </p>
-
-              <MultiEmailInput
-                label="Admin Emails"
-                emails={adminEmails}
-                onChange={setAdminEmails}
-                placeholder="admin@example.com"
-                helperText="Press Enter, comma, or Tab to add each email."
-              />
-
-              <MultiEmailInput
-                label="Judge Emails"
-                emails={judgeEmails}
-                onChange={setJudgeEmails}
-                placeholder="judge@example.com"
-                helperText="Add one or more judge email IDs."
-              />
-            </CardContent>
-          </Card>
-
-          {/* SECTION 5: HACKATHON INFORMATION */}
-          <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-                <FileText className="size-5 text-purple-400" />
-                  <CardTitle className="text-xl font-semibold text-white">
-                    5. Problem Statements & Details
-                  </CardTitle>
-                </div>
-              </CardHeader>
-            <CardContent className="pt-2">
-              <p className="mb-4 text-sm text-white/60">
-                Add one or more problem statements, then describe the hackathon
-                context and expectations.
-              </p>
-              <div className="relative border-l border-white/10 ml-4 space-y-8 pb-4">
-                {problemStatements.map((statement, index) => (
-                  <div key={statement.id} className="relative pl-8">
-                    <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-black ring-2 ring-white/10">
-                      <span className="size-2.5 rounded-full bg-purple-500" />
-                    </span>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-5 relative group">
-                      {problemStatements.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() =>
-                            handleRemoveProblemStatement(statement.id)
-                          }
-                          className="absolute right-3 top-3 px-2 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      )}
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                            Problem Statement {index + 1}
-                          </label>
-                          <Input
-                            value={statement.title}
-                            onChange={(e) =>
-                              updateProblemStatement(
-                                statement.id,
-                                "title",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="e.g. Build an AI tutor for campus support"
-                            className="bg-black/20 border-white/10 text-white font-medium focus-visible:ring-purple-500/40 rounded-xl"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs font-semibold text-white/50 mb-1.5 block uppercase tracking-wider">
-                            Description{" "}
-                            <span className="text-white/30">(Optional)</span>
-                          </label>
-                          <textarea
-                            value={statement.description}
-                            onChange={(e) =>
-                              updateProblemStatement(
-                                statement.id,
-                                "description",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Add extra context, constraints, or goals for this statement..."
-                            className="block w-full min-h-24 resize-y rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="pl-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddProblemStatement}
-                  className="rounded-xl border-dashed border-white/20 text-white/70 hover:text-white"
-                >
-                  <Plus className="mr-2 size-4" />
-                  Add Another Problem Statement
-                </Button>
-              </div>
-
-              <p className="mb-4 mt-6 text-sm text-white/60">
-                Provide a complete overview of the hackathon, including rules,
-                themes, resources, and contact information.
-              </p>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Include background context, expected deliverables, and marking criteria..."
-                className="block min-h-48 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-              />
-            </CardContent>
-          </Card>
-
-          {/* SUBMIT BUTTON */}
           <div className="pt-8 flex justify-end">
             <Button
               type="submit"

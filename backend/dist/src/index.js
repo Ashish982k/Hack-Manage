@@ -7,6 +7,8 @@ import Teams from "../routers/team";
 import Hack from "../routers/hack";
 import { user } from "./db/schema";
 import { eq } from "drizzle-orm";
+import dotenv from "dotenv";
+dotenv.config();
 import { serveStatic } from "@hono/node-server/serve-static";
 const app = new Hono();
 app.use("*", cors({

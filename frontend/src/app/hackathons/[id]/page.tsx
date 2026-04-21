@@ -601,7 +601,7 @@ export default function HackathonDetailPage({
 
   if (isLoadingHackathon) {
     return (
-      <div className="relative min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="relative min-h-screen premium-page text-white flex items-center justify-center">
         <PageGlow />
         <Navbar />
         <Loader2 className="size-8 text-white/60 animate-spin" />
@@ -611,7 +611,7 @@ export default function HackathonDetailPage({
 
   if (!hackathon) {
     return (
-      <div className="relative min-h-screen bg-black text-white">
+      <div className="relative min-h-screen premium-page text-white">
         <PageGlow />
         <Navbar />
         <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
@@ -638,7 +638,7 @@ export default function HackathonDetailPage({
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <PageGlow />
       <Navbar />
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -751,3 +751,4 @@ export default function HackathonDetailPage({
     </div>
   );
 }
+

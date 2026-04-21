@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { hackathonRoles, teams, submissions, stages, evaluations, shortlistedTeams, } from "../src/db/schema";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { db } from "../src/db";
+import { sendWinnerEmails } from "./mail";
 const requireAuth = (c) => {
     const userId = c.get("user")?.id;
     if (!userId)
@@ -269,6 +270,7 @@ export const confirmFinalWinners = async (c) => {
             hackathonId,
             stageId: finalStageId,
         })));
+        sendWinnerEmails(hackathonId).catch(console.error);
         return c.json({
             success: true,
             message: "Winners confirmed successfully",

@@ -5,22 +5,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-[0.02em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-white/10 text-white shadow-sm ring-1 ring-white/10 hover:bg-white/15",
+          "premium-card border border-white/12 bg-white/[0.08] text-white shadow-sm hover:bg-white/[0.12]",
         primary:
-          "bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_30px_rgba(168,85,247,0.25)] hover:brightness-110",
+          "bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.16),0_14px_40px_rgba(124,58,237,0.35)] hover:brightness-110",
         outline:
-          "border border-white/15 bg-transparent text-white hover:bg-white/5",
-        ghost: "bg-transparent text-white/80 hover:bg-white/5 hover:text-white",
+          "border border-white/18 bg-white/[0.02] text-white hover:bg-white/[0.08]",
+        ghost:
+          "bg-transparent text-white/80 hover:bg-white/[0.06] hover:text-white",
       },
       size: {
         default: "h-11 px-5",
-        sm: "h-10 px-4",
-        lg: "h-12 px-7 text-base",
+        sm: "h-10 px-4 text-xs",
+        lg: "h-12 px-7 text-base tracking-[0.025em]",
       },
     },
     defaultVariants: {

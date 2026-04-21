@@ -349,7 +349,7 @@ export default function JudgePage() {
   }, [hackathonId]);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <Navbar />
 
       <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6">
@@ -611,3 +611,4 @@ export default function JudgePage() {
     </div>
   );
 }
+

@@ -166,7 +166,7 @@ export default function HackathonSubmitPage() {
   }, [hackathonId, isSessionPending, router, session?.user?.id]);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <Navbar />
 
       <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
@@ -210,3 +210,4 @@ export default function HackathonSubmitPage() {
     </div>
   );
 }
+

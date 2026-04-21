@@ -103,7 +103,7 @@ export default function CreateTeamPage({
   };
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <PageGlow />
       <Navbar />
 
@@ -232,3 +232,4 @@ export default function CreateTeamPage({
     </div>
   );
 }
+

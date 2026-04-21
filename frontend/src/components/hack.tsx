@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
 import { buildApiAssetUrl } from "@/api";
+import Image from "next/image";
 
 type HackathonCard = {
   id: string;
@@ -35,7 +36,7 @@ export default function HackathonsClient({
   const router = useRouter();
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <Glow />
       <Navbar />
 
@@ -82,7 +83,7 @@ export default function HackathonsClient({
               <Card className="group h-full overflow-hidden transition hover:border-white/20 hover:bg-white/10">
                 {/* IMAGE */}
                 <div className="relative h-44 w-full overflow-hidden">
-                  <img
+                  <Image
                     src={buildApiAssetUrl(`images/${hackathon.headerImg}`)}
                     alt={hackathon.title}
                     className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
@@ -120,3 +121,4 @@ export default function HackathonsClient({
     </div>
   );
 }
+

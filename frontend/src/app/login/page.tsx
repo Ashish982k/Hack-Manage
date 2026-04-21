@@ -44,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center bg-black px-4">
+    <div className="relative flex min-h-screen w-full items-center justify-center premium-page px-4">
       {/* Background gradient glows matching landing page */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/35 via-pink-500/25 to-blue-500/25 blur-3xl" />
@@ -52,15 +52,15 @@ export default function LoginPage() {
         <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/15 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02] backdrop-blur-xl shadow-2xl">
+      <div className="premium-card relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/12 bg-white/[0.02] backdrop-blur-xl shadow-2xl">
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Left side - Login form */}
           <div className="flex flex-col justify-center p-8 lg:p-12">
             <div data-reveal>
-              <h1 className="mb-2 text-3xl font-bold text-white lg:text-4xl">
+              <h1 className="mb-2 text-3xl font-semibold tracking-tight text-white lg:text-4xl">
                 Welcome back
               </h1>
-              <p className="mb-8 text-gray-400">
+              <p className="mb-8 text-white/62">
                 Sign in to your HackathonX account to manage your hackathons
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
                 onClick={() => { 
                   handleLogin("google")
                 }}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:border-white/20"
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.06] px-6 py-3 text-white backdrop-blur-sm"
               >
                 <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -95,7 +95,7 @@ export default function LoginPage() {
 
               <Button
                 onClick={() => handleLogin("github")}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:border-white/20"
+                  className="w-full rounded-xl border border-white/12 bg-white/[0.06] px-6 py-3 text-white backdrop-blur-sm"
               >
                 <svg className="mr-3 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -105,9 +105,9 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-8 text-center" data-reveal>
-                <p className="text-gray-400">
+                <p className="text-white/62">
                   Don&apos;t have an account?{" "}
-                <a href="#" className="text-purple-400 transition-colors hover:text-purple-300">
+                <a href="#" className="text-violet-300 transition-colors hover:text-fuchsia-300">
                   Sign up
                 </a>
               </p>
@@ -119,10 +119,10 @@ export default function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-blue-600/20" />
             <div className="relative flex h-full flex-col justify-center p-12">
               <div data-reveal>
-                <h2 className="mb-6 text-4xl font-bold text-white lg:text-5xl">
+                <h2 className="mb-6 text-4xl font-semibold tracking-tight text-white lg:text-5xl">
                   Run Hackathons Without Chaos
                 </h2>
-                <p className="mb-8 text-lg text-gray-300">
+                <p className="mb-8 text-lg text-white/70">
                   From registration to final evaluation — fully automated with smart verification, 
                   QR entry, and real-time scoring. Join thousands of organizers who trust 
                   HackathonX for seamless event management.
@@ -136,7 +136,7 @@ export default function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <span className="text-gray-300">Smart student verification system</span>
+                  <span className="text-white/72">Smart student verification system</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-500/20">
@@ -144,7 +144,7 @@ export default function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <span className="text-gray-300">QR-based entry management</span>
+                  <span className="text-white/72">QR-based entry management</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
@@ -152,7 +152,7 @@ export default function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <span className="text-gray-300">Real-time scoring & leaderboards</span>
+                  <span className="text-white/72">Real-time scoring & leaderboards</span>
                 </div>
               </div>
             </div>
@@ -162,3 +162,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

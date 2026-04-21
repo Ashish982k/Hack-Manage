@@ -239,7 +239,7 @@ export default function HackathonResultsPage() {
   const winners = leaderboard.slice(0, 3);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
+    <div className="relative min-h-screen premium-page text-white">
       <Navbar />
 
       <div className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6">
@@ -345,3 +345,4 @@ export default function HackathonResultsPage() {
     </div>
   );
 }
+

@@ -155,7 +155,7 @@ export default function HackathonQrPage() {
   }, [hackathonId, isSessionPending, session?.user?.id]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen premium-page text-white">
       <Navbar />
 
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
@@ -255,3 +255,4 @@ export default function HackathonQrPage() {
     </div>
   );
 }
+

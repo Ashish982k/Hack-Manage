@@ -100,24 +100,6 @@ export const accountRelations = relations(account, ({ one }) => ({
         references: [user.id],
     }),
 }));
-export const userVerifications = sqliteTable("user_verifications", {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-        .notNull()
-        .references(() => user.id, { onDelete: "cascade" }),
-    collegeIdUrl: text("college_id_url"),
-    aadhaarMasked: text("aadhaar_masked"),
-    selfieUrl: text("selfie_url"),
-    status: text("status", {
-        enum: ["pending", "approved", "rejected"],
-    })
-        .default("pending")
-        .notNull(),
-    reviewedBy: text("reviewed_by").references(() => user.id),
-    createdAt: text("created_at")
-        .default(sql `CURRENT_TIMESTAMP`)
-        .notNull(),
-});
 export const hackathons = sqliteTable("hackathons", {
     id: text("id").primaryKey(),
     title: text("title").notNull(),
@@ -286,19 +268,6 @@ export const shortlistedTeams = sqliteTable("shortlisted_teams", {
     uniqueIndex("shortlisted_team_stage_unique").on(table.teamId, table.stageId),
 ]);
 /* ===================== CERTIFICATES ===================== */
-export const certificates = sqliteTable("certificates", {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-        .notNull()
-        .references(() => user.id, { onDelete: "cascade" }),
-    hackathonId: text("hackathon_id")
-        .notNull()
-        .references(() => hackathons.id, { onDelete: "cascade" }),
-    certificateUrl: text("certificate_url").notNull(),
-    issuedAt: text("issued_at")
-        .default(sql `CURRENT_TIMESTAMP`)
-        .notNull(),
-});
 export const hackathonSchedules = sqliteTable("hackathon_schedules", {
     id: text("id").primaryKey(),
     hackathonId: text("hackathon_id")

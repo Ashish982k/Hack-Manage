@@ -25,6 +25,22 @@ const resolveFinalStage = async (hackathonId: string) => {
   });
 };
 
+const resolveStageBeforeFinal = async (hackathonId: string, finalStageId: string) => {
+  const stageRows = await db.query.stages.findMany({
+    where: eq(stages.hackathonId, hackathonId),
+    columns: {
+      id: true,
+      startTime: true,
+    },
+    orderBy: [asc(stages.startTime), asc(stages.id)],
+  });
+
+  const finalIndex = stageRows.findIndex((stage) => stage.id === finalStageId);
+  if (finalIndex <= 0) return null;
+
+  return stageRows[finalIndex - 1];
+};
+
 export const generateQR = async (c: AppContext) => {
   const hackathonId = c.req.param("id");
   const userId = c.get("user")?.id;
@@ -53,7 +69,7 @@ export const generateQR = async (c: AppContext) => {
     return c.json({ error: "Final stage not found" }, 404);
   }
 
-  const shortlisted = await db.query.shortlistedTeams.findFirst({
+  let shortlisted = await db.query.shortlistedTeams.findFirst({
     where: and(
       eq(shortlistedTeams.hackathonId, hackathonId),
       eq(shortlistedTeams.stageId, finalStage.id),
@@ -63,6 +79,22 @@ export const generateQR = async (c: AppContext) => {
       )
     ),
   });
+
+  if (!shortlisted) {
+    const stageBeforeFinal = await resolveStageBeforeFinal(hackathonId, finalStage.id);
+    if (stageBeforeFinal) {
+      shortlisted = await db.query.shortlistedTeams.findFirst({
+        where: and(
+          eq(shortlistedTeams.hackathonId, hackathonId),
+          eq(shortlistedTeams.stageId, stageBeforeFinal.id),
+          inArray(
+            shortlistedTeams.teamId,
+            userTeams.map((t) => t.teamId)
+          )
+        ),
+      });
+    }
+  }
 
   if (!shortlisted) {
     return c.json({ error: "Not shortlisted for final" }, 403);

@@ -85,7 +85,7 @@ export default function Benefits() {
                     ].map((t) => (
                       <div
                         key={t}
-                        className="flex items-start gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 hover:bg-white/5 transition-colors duration-300"
+                        className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4 hover:bg-white/5 transition-colors duration-300"
                       >
                         <span className="mt-0.5 inline-flex size-10 items-center justify-center rounded-2xl bg-purple-500/15 ring-1 ring-purple-500/25 shadow-lg shadow-purple-500/10">
                           <ShieldCheck className="size-5 text-purple-300" />
@@ -117,7 +117,7 @@ export default function Benefits() {
                     ].map((t) => (
                       <div
                         key={t}
-                        className="flex items-start gap-4 rounded-2xl border border-white/10 bg-black/25 p-4 hover:bg-white/5 transition-colors duration-300"
+                        className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.05] p-4 hover:bg-white/5 transition-colors duration-300"
                       >
                         <span className="mt-0.5 inline-flex size-10 items-center justify-center rounded-2xl bg-blue-500/15 ring-1 ring-blue-500/25 shadow-lg shadow-blue-500/10">
                           <BadgeCheck className="size-5 text-blue-300" />

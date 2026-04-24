@@ -19,7 +19,7 @@ export function AccessRolesSection({
   onJudgeEmailsChange,
 }: AccessRolesSectionProps) {
   return (
-    <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+    <Card className="rounded-3xl border border-white/10 bg-white/[0.07] backdrop-blur-xl">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3 border-b border-white/10 pb-4">
           <Users className="size-5 text-emerald-400" />

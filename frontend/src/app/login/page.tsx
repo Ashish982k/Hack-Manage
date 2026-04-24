@@ -47,12 +47,12 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen w-full items-center justify-center premium-page px-4">
       {/* Background gradient glows matching landing page */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/35 via-pink-500/25 to-blue-500/25 blur-3xl" />
-        <div className="absolute right-[-140px] top-[220px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
-        <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-blue-500/15 blur-3xl" />
+        <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/28 via-pink-500/18 to-blue-500/18 blur-3xl" />
+        <div className="absolute right-[-140px] top-[220px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/16 via-purple-500/16 to-pink-500/16 blur-3xl" />
+        <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-pink-500/16 via-purple-500/16 to-blue-500/12 blur-3xl" />
       </div>
 
-      <div className="premium-card relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/12 bg-white/[0.02] backdrop-blur-xl shadow-2xl">
+      <div className="premium-card relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] backdrop-blur-xl shadow-2xl">
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Left side - Login form */}
           <div className="flex flex-col justify-center p-8 lg:p-12">
@@ -60,7 +60,7 @@ export default function LoginPage() {
               <h1 className="mb-2 text-3xl font-semibold tracking-tight text-white lg:text-4xl">
                 Welcome back
               </h1>
-              <p className="mb-8 text-white/62">
+              <p className="mb-8 text-[#a0a3ab]">
                 Sign in to your HackathonX account to manage your hackathons
               </p>
             </div>
@@ -105,9 +105,9 @@ export default function LoginPage() {
             </div>
 
             <div className="mt-8 text-center" data-reveal>
-                <p className="text-white/62">
+                <p className="text-[#a0a3ab]">
                   Don&apos;t have an account?{" "}
-                <a href="#" className="text-violet-300 transition-colors hover:text-fuchsia-300">
+                <a href="#" className="text-violet-300/90 transition-colors hover:text-fuchsia-300/90">
                   Sign up
                 </a>
               </p>
@@ -116,7 +116,7 @@ export default function LoginPage() {
 
           {/* Right side - Hero content */}
           <div className="relative hidden lg:block">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-pink-600/20 to-blue-600/20" />
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-600/16 via-pink-600/16 to-blue-600/16" />
             <div className="relative flex h-full flex-col justify-center p-12">
               <div data-reveal>
                 <h2 className="mb-6 text-4xl font-semibold tracking-tight text-white lg:text-5xl">
@@ -131,7 +131,7 @@ export default function LoginPage() {
 
               <div className="space-y-4" data-reveal>
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/16">
                     <svg className="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -139,7 +139,7 @@ export default function LoginPage() {
                   <span className="text-white/72">Smart student verification system</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-pink-500/16">
                     <svg className="h-5 w-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
@@ -147,7 +147,7 @@ export default function LoginPage() {
                   <span className="text-white/72">QR-based entry management</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/16">
                     <svg className="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>

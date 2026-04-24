@@ -307,7 +307,7 @@ export default function EvaluateTeamPage({
                     {team.members.map((member) => (
                       <div
                         key={member.id}
-                        className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm"
+                        className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm"
                       >
                         <span className="text-white/90">
                           {member.user?.name ?? "Unknown User"}
@@ -367,7 +367,7 @@ export default function EvaluateTeamPage({
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                   <p className="text-sm font-semibold text-white/90">Evaluate Submission</p>
                   <p className="mt-1 text-xs text-white/60">
                     {isFinalStage

@@ -414,31 +414,31 @@ export default function JudgeLeaderboardPage() {
                             <tr className="border-b border-white/10 bg-white/[0.02]">
                               <td colSpan={5} className="px-4 py-4">
                                 <div className="grid gap-3 text-sm text-white/80 sm:grid-cols-3 lg:grid-cols-5">
-                                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                                     <p className="text-xs text-white/60">Technical</p>
                                     <p className="mt-1 font-semibold">
                                       {formatScore(team.technical)}
                                     </p>
                                   </div>
-                                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                                     <p className="text-xs text-white/60">Feasibility</p>
                                     <p className="mt-1 font-semibold">
                                       {formatScore(team.feasibility)}
                                     </p>
                                   </div>
-                                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                                     <p className="text-xs text-white/60">Innovation</p>
                                     <p className="mt-1 font-semibold">
                                       {formatScore(team.innovation)}
                                     </p>
                                   </div>
-                                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                                     <p className="text-xs text-white/60">Presentation</p>
                                     <p className="mt-1 font-semibold">
                                       {formatScore(team.presentation)}
                                     </p>
                                   </div>
-                                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                                  <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                                     <p className="text-xs text-white/60">Impact</p>
                                     <p className="mt-1 font-semibold">
                                       {formatScore(team.impact)}

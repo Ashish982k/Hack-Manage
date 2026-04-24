@@ -20,8 +20,8 @@ type StageType = "SUBMISSION" | "EVALUATION" | "FINAL";
 
 type Submission = {
   submissionId: string;
-  pptUrl: string;
-  githubUrl: string;
+  pptUrl: string | null;
+  githubUrl: string | null;
   submittedAt: string;
   stageId: string;
   stageTitle: string;
@@ -564,23 +564,31 @@ export default function JudgePage() {
 
                       <div className="mt-3 flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-4">
-                          <a
-                            href={item.pptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            PPT
-                          </a>
+                          {item.pptUrl ? (
+                            <a
+                              href={item.pptUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-400 underline"
+                            >
+                              PPT
+                            </a>
+                          ) : (
+                            <span className="text-sm text-white/50">PPT not provided</span>
+                          )}
 
-                          <a
-                            href={item.githubUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-green-400 underline"
-                          >
-                            GitHub
-                          </a>
+                          {item.githubUrl ? (
+                            <a
+                              href={item.githubUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-green-400 underline"
+                            >
+                              GitHub
+                            </a>
+                          ) : (
+                            <span className="text-sm text-white/50">GitHub not provided</span>
+                          )}
                         </div>
 
                         <Button

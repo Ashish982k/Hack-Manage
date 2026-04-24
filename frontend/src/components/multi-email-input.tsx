@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { addEmailsToList } from "@/lib/email-list";
 import { cn } from "@/lib/utils";
 
+
+
 interface MultiEmailInputProps {
   label: string;
   emails: string[];
@@ -58,9 +60,9 @@ export function MultiEmailInput({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <label className="text-sm font-semibold text-white/90">{label}</label>
+      <label className="text-sm font-semibold text-[#c8cad0]">{label}</label>
 
-      <div className="flex min-h-11 w-full flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 focus-within:ring-2 focus-within:ring-purple-500/40">
+      <div className="flex min-h-11 w-full flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 focus-within:ring-2 focus-within:ring-purple-400/35">
         {emails.map((email) => (
           <Badge key={email} className="gap-1.5 pr-1.5 text-white/90">
             <span>{email}</span>
@@ -90,7 +92,7 @@ export function MultiEmailInput({
           }}
           onBlur={commitInput}
           placeholder={emails.length === 0 ? placeholder : "Add another email"}
-          className="h-7 min-w-[220px] flex-1 bg-transparent text-sm text-white placeholder:text-white/35 focus:outline-none"
+          className="h-7 min-w-[220px] flex-1 bg-transparent text-sm text-[#e2e4e9] placeholder:text-white/30 focus:outline-none"
         />
       </div>
 

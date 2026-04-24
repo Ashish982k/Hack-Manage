@@ -272,12 +272,12 @@ export function QrScannerCard({
   }, [startScanner, stopScanner]);
 
   return (
-    <Card className={cn("border-white/10 bg-black/20", className)}>
+    <Card className={cn("border-white/10 bg-white/[0.04]", className)}>
       <CardHeader>
         <CardTitle className="text-white">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black">
+        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#0c0e14]">
           <video
             ref={videoRef}
             className="h-72 w-full object-cover"
@@ -286,7 +286,7 @@ export function QrScannerCard({
             autoPlay
           />
           {!isScanning ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-sm text-white/70">
+            <div className="absolute inset-0 flex items-center justify-center bg-[#0c0e14]/80 text-sm text-white/70">
               Camera is off
             </div>
           ) : null}

@@ -22,7 +22,7 @@ export function StagesSection({
   onUpdateStage,
 }: StagesSectionProps) {
   return (
-    <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+    <Card className="rounded-3xl border border-white/10 bg-white/[0.07] backdrop-blur-xl">
       <CardHeader className="pb-4">
         <div className="flex border-b border-white/10 items-center justify-between pb-4">
           <div className="flex items-center gap-3">
@@ -37,7 +37,7 @@ export function StagesSection({
         <div className="relative border-l border-white/10 ml-4 space-y-8 pb-4">
           {stages.map((stage) => (
             <div key={stage.id} className="relative pl-8">
-              <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-black ring-2 ring-white/10">
+              <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-[#0c0e14] ring-2 ring-white/10">
                 <span className="size-2.5 rounded-full bg-pink-500" />
               </span>
 
@@ -63,7 +63,7 @@ export function StagesSection({
                         onUpdateStage(stage.id, "title", event.target.value)
                       }
                       placeholder="e.g. Round 1 - Ideation Phase"
-                      className="bg-black/20 border-white/10 text-white font-medium focus-visible:ring-pink-500/40 rounded-xl"
+                      className="bg-white/[0.04] border-white/10 text-white font-medium focus-visible:ring-pink-500/40 rounded-xl"
                       required
                     />
                   </div>
@@ -77,7 +77,7 @@ export function StagesSection({
                       onChange={(event) =>
                         onUpdateStage(stage.id, "type", event.target.value)
                       }
-                      className="block w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+                      className="block w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
                     >
                       <option value="SUBMISSION">Submission</option>
                       <option value="EVALUATION">Evaluation</option>
@@ -96,7 +96,7 @@ export function StagesSection({
                         onChange={(event) =>
                           onUpdateStage(stage.id, "startDate", event.target.value)
                         }
-                        className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
+                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
                         required
                       />
                     </div>
@@ -110,7 +110,7 @@ export function StagesSection({
                         onChange={(event) =>
                           onUpdateStage(stage.id, "endDate", event.target.value)
                         }
-                        className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
+                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
                         required
                       />
                     </div>
@@ -126,7 +126,7 @@ export function StagesSection({
                         onUpdateStage(stage.id, "description", event.target.value)
                       }
                       placeholder="Detail what participants need to do in this stage..."
-                      className="block w-full min-h-20 resize-y rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
+                      className="block w-full min-h-20 resize-y rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-pink-500/40"
                     />
                   </div>
                 </div>

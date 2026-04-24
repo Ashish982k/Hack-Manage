@@ -92,7 +92,7 @@ export default function AdminPreview() {
                     {stats.map((s) => (
                       <div
                         key={s.label}
-                        className="stat-card h-full rounded-2xl border border-white/10 bg-black/25 p-6 hover:bg-white/5 transition-all duration-300 hover:scale-[1.02]"
+                        className="stat-card h-full rounded-2xl border border-white/10 bg-white/[0.05] p-6 hover:bg-white/5 transition-all duration-300 hover:scale-[1.02]"
                       >
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-white/70">{s.label}</p>
@@ -143,7 +143,7 @@ export default function AdminPreview() {
                         ].map((a) => (
                           <div
                             key={a.title}
-                            className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 hover:bg-white/5 transition-colors duration-300"
+                            className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4 hover:bg-white/5 transition-colors duration-300"
                           >
                             <span className="mt-0.5 inline-flex size-9 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
                               <a.icon className="size-4 text-white/80" />

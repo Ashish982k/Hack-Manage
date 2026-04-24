@@ -120,7 +120,7 @@ export function JudgeLeaderboard({
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
-                      className="size-4 rounded border-white/20 bg-black/20 accent-purple-500"
+                      className="size-4 rounded border-white/20 bg-white/[0.04] accent-purple-500"
                       checked={checked}
                       disabled={isShortlistConfirmed}
                       onChange={() => onToggleShortlist(team.teamId)}

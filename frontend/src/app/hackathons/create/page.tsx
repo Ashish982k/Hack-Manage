@@ -331,7 +331,7 @@ export default function CreateHackathonPage() {
         </button>
 
         <div className="mb-10">
-          <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/25 ring-1 ring-white/10 shadow-[0_0_30px_rgba(168,85,247,0.15)] mb-6">
+          <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/18 ring-1 ring-white/10 shadow-[0_0_30px_rgba(168,85,247,0.15)] mb-6">
             <Sparkles className="size-6 text-purple-200" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">

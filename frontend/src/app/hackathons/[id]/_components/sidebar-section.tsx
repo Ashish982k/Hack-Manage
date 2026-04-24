@@ -123,7 +123,7 @@ export function SidebarSection({
               <CardTitle className="text-white">Progress</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-white/90">Step 1</p>
                   <ToneBadge tone={isJoined ? "success" : "warning"}>
@@ -135,7 +135,7 @@ export function SidebarSection({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-white/90">Step 2</p>
                   <ToneBadge
@@ -157,7 +157,7 @@ export function SidebarSection({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-white/90">Step 3</p>
                   <ToneBadge

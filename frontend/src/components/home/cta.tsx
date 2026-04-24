@@ -57,7 +57,7 @@ export default function CTA() {
       <Container>
         <div ref={contentRef}>
           <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-gradient-to-br from-purple-500/25 via-pink-500/20 to-blue-500/20 p-10 sm:p-16">
-            <div className="absolute inset-0 bg-black/40" />
+            <div className="absolute inset-0 bg-white/[0.07]" />
 
             <div className="absolute -left-32 -top-32 size-[450px] rounded-full bg-purple-500/30 blur-[100px] animate-pulse-slow" />
             <div

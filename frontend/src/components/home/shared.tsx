@@ -12,8 +12,8 @@ export function Glow() {
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
       <div className="absolute left-1/2 top-[-200px] h-[800px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-600/30 via-pink-500/20 to-blue-600/20 blur-[120px] animate-pulse-slow" />
-      <div className="absolute right-[-200px] top-[150px] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/20 to-pink-500/15 blur-[100px]" />
-      <div className="absolute bottom-[-300px] left-[-200px] h-[700px] w-[700px] rounded-full bg-gradient-to-br from-pink-500/25 via-purple-500/20 to-blue-500/20 blur-[100px]" />
+      <div className="absolute right-[-200px] top-[150px] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-500/25 via-purple-500/16 to-pink-500/15 blur-[100px]" />
+      <div className="absolute bottom-[-300px] left-[-200px] h-[700px] w-[700px] rounded-full bg-gradient-to-br from-pink-500/25 via-purple-500/16 to-blue-500/20 blur-[100px]" />
       <div className="absolute left-[20%] top-[40%] h-[300px] w-[300px] rounded-full bg-purple-500/15 blur-[80px]" />
       <div className="absolute right-[15%] bottom-[20%] h-[250px] w-[250px] rounded-full bg-blue-500/15 blur-[70px]" />
     </div>

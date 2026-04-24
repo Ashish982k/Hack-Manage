@@ -16,6 +16,12 @@ type ShortlistedTeam = {
   teamName: string;
 };
 
+type StageSummary = {
+  id: string;
+  type: string;
+  startTime: string | null;
+};
+
 const readMessage = (value: unknown) => {
   if (
     typeof value === "object" &&
@@ -56,37 +62,52 @@ const readShortlistedTeams = (value: unknown): ShortlistedTeam[] => {
   return [];
 };
 
-const readFinalStageId = (value: unknown): string | null => {
+const readStages = (value: unknown): StageSummary[] => {
   if (
     typeof value !== "object" ||
     value === null ||
     !("stages" in value) ||
     !Array.isArray((value as { stages?: unknown }).stages)
   ) {
-    return null;
+    return [];
   }
 
-  const finalStages = (value as { stages: unknown[] }).stages
+  return (value as { stages: unknown[] }).stages
     .map((stage) => {
       if (typeof stage !== "object" || stage === null) return null;
       const row = stage as Record<string, unknown>;
-      if (typeof row.id !== "string" || row.type !== "FINAL") return null;
+      if (typeof row.id !== "string" || typeof row.type !== "string") return null;
       return {
         id: row.id,
+        type: row.type,
         startTime:
           typeof row.startTime === "string" && row.startTime.trim().length > 0
             ? row.startTime
             : null,
       };
     })
-    .filter((stage): stage is { id: string; startTime: string | null } => stage !== null)
+    .filter((stage): stage is StageSummary => stage !== null)
     .sort(
       (a, b) =>
         (a.startTime ?? "").localeCompare(b.startTime ?? "") ||
         a.id.localeCompare(b.id),
     );
+};
 
-  return finalStages[0]?.id ?? null;
+const readDefaultStageId = (stages: StageSummary[]) => {
+  const finalStage = stages.find((stage) => stage.type === "FINAL");
+  if (finalStage) return finalStage.id;
+
+  const latestEvaluation = [...stages]
+    .filter((stage) => stage.type === "EVALUATION")
+    .sort(
+      (a, b) =>
+        (b.startTime ?? "").localeCompare(a.startTime ?? "") ||
+        b.id.localeCompare(a.id),
+    )[0];
+  if (latestEvaluation) return latestEvaluation.id;
+
+  return stages[0]?.id ?? null;
 };
 
 const sortByTeamName = (teams: ShortlistedTeam[]) =>
@@ -155,50 +176,70 @@ export default function PublicLeaderboardPage() {
         return;
       }
 
-      const finalStageId = readFinalStageId(hackathonData);
-      if (!finalStageId) {
+      const stages = readStages(hackathonData);
+      if (stages.length === 0) {
         setTeams([]);
-        setError("Final stage is not configured for this hackathon.");
+        setError("No stages are configured for this hackathon.");
         return;
       }
 
-      setResolvedStageId(finalStageId);
+      const requestedStageId =
+        stageId && stages.some((stage) => stage.id === stageId) ? stageId : null;
+      const initialStageId = requestedStageId ?? readDefaultStageId(stages);
 
-      if (!stageId || stageId !== finalStageId) {
+      if (!initialStageId) {
         setTeams([]);
-        setError("This page shows final-round shortlisted teams. Redirecting...");
-        router.replace(
-          `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(finalStageId)}`,
-        );
+        setError("No valid stage found for shortlist.");
         return;
       }
 
-      const res = await fetchHackathonShortlistedTeams(hackathonId, finalStageId);
+      const stageCandidates = [
+        initialStageId,
+        ...[...stages]
+          .sort(
+            (a, b) =>
+              (b.startTime ?? "").localeCompare(a.startTime ?? "") ||
+              b.id.localeCompare(a.id),
+          )
+          .map((stage) => stage.id)
+          .filter((id) => id !== initialStageId),
+      ];
 
-      const data: unknown = await res.json().catch(() => null);
+      let resolvedStage = initialStageId;
+      let resolvedTeams: ShortlistedTeam[] = [];
+      let lastError: string | null = null;
 
-      if (!res.ok) {
-        const suggestedStageId =
-          typeof data === "object" &&
-          data !== null &&
-          "shortlistedStageId" in data &&
-          typeof (data as { shortlistedStageId?: unknown }).shortlistedStageId ===
-            "string"
-            ? (data as { shortlistedStageId: string }).shortlistedStageId
-            : null;
-        if (suggestedStageId && suggestedStageId !== stageId) {
-          setError("Redirecting to the shortlisted stage...");
-          router.replace(
-            `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(suggestedStageId)}`,
-          );
-          return;
+      for (const candidateStageId of stageCandidates) {
+        const res = await fetchHackathonShortlistedTeams(hackathonId, candidateStageId);
+        const data: unknown = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          lastError = readMessage(data) ?? "Failed to load shortlisted teams.";
+          continue;
         }
-        setTeams([]);
-        setError(readMessage(data) ?? "Failed to load shortlisted teams.");
-        return;
+
+        const candidateTeams = sortByTeamName(readShortlistedTeams(data));
+        if (candidateTeams.length > 0) {
+          resolvedStage = candidateStageId;
+          resolvedTeams = candidateTeams;
+          break;
+        }
       }
 
-      setTeams(sortByTeamName(readShortlistedTeams(data)));
+      setResolvedStageId(resolvedStage);
+      setTeams(resolvedTeams);
+
+      if (stageId !== resolvedStage) {
+        router.replace(
+          `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(resolvedStage)}`,
+        );
+      }
+
+      if (!resolvedTeams.length && lastError) {
+        setError(lastError);
+      } else {
+        setError(null);
+      }
     } catch {
       setTeams([]);
       setError("Please check your connection and try again.");
@@ -266,7 +307,7 @@ export default function PublicLeaderboardPage() {
               <p className="text-sm text-rose-300">{error}</p>
               {resolvedStageId ? (
                 <p className="text-xs text-white/60">
-                  Expected final stage: {resolvedStageId}
+                  Resolved stage: {resolvedStageId}
                 </p>
               ) : null}
               <Button variant="outline" onClick={loadLeaderboard}>

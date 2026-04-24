@@ -164,10 +164,10 @@ export function ParticipantSections({
                   {team.members.map((member) => (
                     <div
                       key={member.id || member.name}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-4"
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/25 ring-1 ring-white/10">
+                        <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/18 ring-1 ring-white/10">
                           <Users className="size-4 text-white/80" />
                         </span>
                         <div>
@@ -322,7 +322,7 @@ export function ParticipantSections({
                       onChange={(event) =>
                         onSelectedProblemStatementChange(event.target.value)
                       }
-                      className="block w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      className="block w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                       disabled={
                         isSubmissionEvaluated ||
                         isSubmissionLocked ||
@@ -337,7 +337,7 @@ export function ParticipantSections({
                       ))}
                     </select>
                   ) : (
-                    <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/50">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/50">
                       No problem statements are available for this
                       hackathon.
                     </div>
@@ -345,7 +345,7 @@ export function ParticipantSections({
                 </div>
 
                 {lastSubmitted ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs text-white/60">
                       Last submission
                     </p>
@@ -419,7 +419,7 @@ export function ParticipantSections({
                 </div>
 
                 {isSubmissionEvaluated && submissionScoreBreakdown ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-white/90">
                         Score Breakdown
@@ -445,7 +445,7 @@ export function ParticipantSections({
 
                     {showScoreBreakdown ? (
                       <div className="mt-3 grid gap-3 text-sm text-white/80 sm:grid-cols-2 lg:grid-cols-3">
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">
                             Technical
                           </p>
@@ -455,7 +455,7 @@ export function ParticipantSections({
                             )}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">
                             Feasibility
                           </p>
@@ -465,7 +465,7 @@ export function ParticipantSections({
                             )}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">
                             Innovation
                           </p>
@@ -475,7 +475,7 @@ export function ParticipantSections({
                             )}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">
                             Presentation
                           </p>
@@ -485,13 +485,13 @@ export function ParticipantSections({
                             )}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">Impact</p>
                           <p className="mt-1 font-semibold">
                             {formatScore(submissionScoreBreakdown.impact)}
                           </p>
                         </div>
-                        <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
                           <p className="text-xs text-white/60">
                             Total Score
                           </p>

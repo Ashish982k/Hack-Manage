@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import {
-  hackathonRoles,
   teams,
   submissions,
   stages,
@@ -11,36 +10,13 @@ import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { db } from "../src/db";
 import type { Context } from "hono";
 import { sendWinnerEmails } from "./mail";
-
-const requireAuth = (c: Context) => {
-  const userId = c.get("user")?.id;
-  if (!userId) return null;
-  return userId;
-};
-
-const requireJudge = async (userId: string, hackathonId: string) => {
-  const role = await db.query.hackathonRoles.findFirst({
-    where: and(
-      eq(hackathonRoles.hackathonId, hackathonId),
-      eq(hackathonRoles.userId, userId),
-    ),
-  });
-  return role?.role === "judge";
-};
-
-const requireJudgeOrAdmin = async (userId: string, hackathonId: string) => {
-  const role = await db.query.hackathonRoles.findFirst({
-    where: and(
-      eq(hackathonRoles.hackathonId, hackathonId),
-      eq(hackathonRoles.userId, userId),
-    ),
-  });
-  return role?.role === "judge" || role?.role === "admin";
-};
+import { getUserIdFromContext } from "../lib/functions/auth";
+import { isHackathonJudge, isHackathonJudgeOrAdmin } from "../lib/functions/roles";
+import { resolveSubmissionStageId } from "../lib/functions/stage";
 
 export const getSubmissions = async (c: Context) => {
   try {
-    const userId = requireAuth(c);
+    const userId = getUserIdFromContext(c);
     const hackathonId = c.req.param("id");
     const stageId = c.req.query("stageId")?.trim();
 
@@ -48,7 +24,7 @@ export const getSubmissions = async (c: Context) => {
     if (!hackathonId || !stageId)
       return c.json({ message: "Missing required fields" }, 400);
 
-    const isJudge = await requireJudge(userId, hackathonId);
+    const isJudge = await isHackathonJudge(hackathonId, userId);
     if (!isJudge) return c.json({ message: "Unauthorized" }, 403);
 
     const stage = await db.query.stages.findFirst({
@@ -57,6 +33,8 @@ export const getSubmissions = async (c: Context) => {
 
     if (!stage)
       return c.json({ message: "Stage not found" }, 404);
+
+    const submissionStageId = await resolveSubmissionStageId(hackathonId, stage);
 
     const data = await db
       .select({
@@ -72,31 +50,34 @@ export const getSubmissions = async (c: Context) => {
       .where(
         and(
           eq(teams.hackathonId, hackathonId),
-          eq(submissions.stageId, stage.id),
+          eq(submissions.stageId, submissionStageId),
         ),
       );
 
-    const evaluated = new Set(
-      (
-        await db
-          .select({ submissionId: evaluations.submissionId })
-          .from(evaluations)
-          .where(
-            and(
-              eq(evaluations.judgeId, userId),
-              inArray(
-                evaluations.submissionId,
-                data.map((d) => d.submissionId),
-              ),
-            ),
-          )
-      ).map((d) => d.submissionId),
-    );
+    const submissionIds = data.map((item) => item.submissionId);
+    const evaluated = submissionIds.length
+      ? new Set(
+          (
+            await db
+              .select({ submissionId: evaluations.submissionId })
+              .from(evaluations)
+              .where(
+                and(
+                  eq(evaluations.judgeId, userId),
+                  inArray(evaluations.submissionId, submissionIds),
+                ),
+              )
+          ).map((item) => item.submissionId),
+        )
+      : new Set<string>();
 
     return c.json({
       count: data.length,
       data: data.map((d) => ({
         ...d,
+        stageId: stage.id,
+        stageTitle: stage.title,
+        stageType: stage.type,
         evaluated: evaluated.has(d.submissionId),
       })),
     });
@@ -107,7 +88,7 @@ export const getSubmissions = async (c: Context) => {
 
 export const evaluateSubmission = async (c: Context) => {
   try {
-    const userId = requireAuth(c);
+    const userId = getUserIdFromContext(c);
     const hackathonId = c.req.param("id");
     const teamId = c.req.param("teamId");
     const stageId = c.req.query("stageId")?.trim();
@@ -115,7 +96,7 @@ export const evaluateSubmission = async (c: Context) => {
     if (!userId || !hackathonId || !teamId || !stageId)
       return c.json({ message: "Missing required fields" }, 400);
 
-    const isJudge = await requireJudge(userId, hackathonId);
+    const isJudge = await isHackathonJudge(hackathonId, userId);
     if (!isJudge) return c.json({ message: "Unauthorized" }, 403);
 
     const [team, stage] = await Promise.all([
@@ -133,8 +114,12 @@ export const evaluateSubmission = async (c: Context) => {
       return c.json({ message: "Invalid stage" }, 400);
     }
 
+    const submissionStageId = await resolveSubmissionStageId(hackathonId, stage);
     const submission = await db.query.submissions.findFirst({
-      where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, stageId)),
+      where: and(
+        eq(submissions.teamId, teamId),
+        eq(submissions.stageId, submissionStageId),
+      ),
     });
 
     if (!submission && stage.type !== "FINAL") {
@@ -199,36 +184,47 @@ export const evaluateSubmission = async (c: Context) => {
 };
 
 export const fetchEvaluatedTeams = async (c: Context) => {
-  const hackathonId = c.req.param("id");
-  const stageId = c.req.query("stageId")?.trim();
+  try {
+    const hackathonId = c.req.param("id");
+    const stageId = c.req.query("stageId")?.trim();
 
-  if (!hackathonId || !stageId)
-    return c.json({ message: "Missing required fields" }, 400);
+    if (!hackathonId || !stageId)
+      return c.json({ message: "Missing required fields" }, 400);
 
-  const data = await db
-    .select({
-      teamId: teams.id,
-      teamName: teams.name,
-      totalScore: sql<number>`AVG(${evaluations.total})`,
-    })
-    .from(submissions)
-    .innerJoin(teams, eq(submissions.teamId, teams.id))
-    .innerJoin(evaluations, eq(submissions.id, evaluations.submissionId))
-    .where(
-      and(
-        eq(submissions.stageId, stageId),
-        eq(teams.hackathonId, hackathonId),
-      ),
-    )
-    .groupBy(teams.id)
-    .orderBy(desc(sql`AVG(${evaluations.total})`));
+    const stage = await db.query.stages.findFirst({
+      where: and(eq(stages.id, stageId), eq(stages.hackathonId, hackathonId)),
+    });
+    if (!stage) return c.json({ message: "Stage not found" }, 404);
 
-  return c.json({ data });
+    const submissionStageId = await resolveSubmissionStageId(hackathonId, stage);
+
+    const data = await db
+      .select({
+        teamId: teams.id,
+        teamName: teams.name,
+        totalScore: sql<number>`AVG(${evaluations.total})`,
+      })
+      .from(submissions)
+      .innerJoin(teams, eq(submissions.teamId, teams.id))
+      .innerJoin(evaluations, eq(submissions.id, evaluations.submissionId))
+      .where(
+        and(
+          eq(submissions.stageId, submissionStageId),
+          eq(teams.hackathonId, hackathonId),
+        ),
+      )
+      .groupBy(teams.id)
+      .orderBy(desc(sql`AVG(${evaluations.total})`));
+
+    return c.json({ data });
+  } catch {
+    return c.json({ message: "Something went wrong" }, 500);
+  }
 };
 
 export const createShortlistedTeams = async (c: Context) => {
   try {
-    const userId = requireAuth(c);
+    const userId = getUserIdFromContext(c);
     const hackathonId = c.req.param("id");
     const { stageId, teamIds } = await c.req.json();
 
@@ -236,7 +232,7 @@ export const createShortlistedTeams = async (c: Context) => {
       return c.json({ success: false, message: "Invalid input" }, 400);
     }
 
-    const isJudgeOrAdmin = await requireJudgeOrAdmin(userId, hackathonId);
+    const isJudgeOrAdmin = await isHackathonJudgeOrAdmin(hackathonId, userId);
     if (!isJudgeOrAdmin) {
       return c.json({ success: false, message: "Unauthorized" }, 403);
     }
@@ -309,7 +305,7 @@ export const createShortlistedTeams = async (c: Context) => {
 
 export const confirmFinalWinners = async (c: Context) => {
   try {
-    const userId = requireAuth(c);
+    const userId = getUserIdFromContext(c);
     const hackathonId = c.req.param("id");
     const { finalStageId, winnerCount } = await c.req.json();
 
@@ -323,7 +319,7 @@ export const confirmFinalWinners = async (c: Context) => {
       return c.json({ success: false, message: "Invalid input" }, 400);
     }
 
-    const isJudgeOrAdmin = await requireJudgeOrAdmin(userId, hackathonId);
+    const isJudgeOrAdmin = await isHackathonJudgeOrAdmin(hackathonId, userId);
     if (!isJudgeOrAdmin) {
       return c.json({ success: false, message: "Unauthorized" }, 403);
     }

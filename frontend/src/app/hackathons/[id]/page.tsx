@@ -228,22 +228,36 @@ export default function HackathonDetailPage({
       return;
     }
 
-    const finalStageId = resolveFinalStageIdFromStages(hackathon?.stages ?? []);
+    const stageList = [...(hackathon?.stages ?? [])].sort((a, b) => {
+      const aStart = a.startTime ?? "";
+      const bStart = b.startTime ?? "";
+      return aStart.localeCompare(bStart) || a.id.localeCompare(b.id);
+    });
+    const finalStageId = resolveFinalStageIdFromStages(stageList);
     if (!finalStageId) {
       setCanViewQrCodes(false);
       return;
     }
 
-    try {
-      const res = await fetchHackathonShortlistedTeams(hackathonId, finalStageId);
-      if (!res.ok) {
-        setCanViewQrCodes(false);
-        return;
-      }
+    const shortlistStageCandidates: string[] = [finalStageId];
+    const finalIndex = stageList.findIndex((stage) => stage.id === finalStageId);
+    if (finalIndex > 0) {
+      shortlistStageCandidates.push(stageList[finalIndex - 1].id);
+    }
 
-      const data: unknown = await res.json().catch(() => null);
-      const shortlistedTeamIds = readShortlistedTeamIds(data);
-      setCanViewQrCodes(shortlistedTeamIds.has(team.id));
+    try {
+      for (const stageCandidate of shortlistStageCandidates) {
+        const res = await fetchHackathonShortlistedTeams(hackathonId, stageCandidate);
+        if (!res.ok) continue;
+
+        const data: unknown = await res.json().catch(() => null);
+        const shortlistedTeamIds = readShortlistedTeamIds(data);
+        if (shortlistedTeamIds.has(team.id)) {
+          setCanViewQrCodes(true);
+          return;
+        }
+      }
+      setCanViewQrCodes(false);
     } catch {
       setCanViewQrCodes(false);
     }
@@ -434,8 +448,8 @@ export default function HackathonDetailPage({
   const judgeLeaderboardUrl = leaderboardStageId
     ? `/hackathons/${hackathonId}/judge/leaderboard?stageId=${encodeURIComponent(leaderboardStageId)}`
     : null;
-  const shortlistedTeamsUrl = finalStageId
-    ? `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(finalStageId)}`
+  const shortlistedTeamsUrl = leaderboardStageId
+    ? `/hackathons/${hackathonId}/leaderboard?stageId=${encodeURIComponent(leaderboardStageId)}`
     : null;
   const sortedLeaderboardTeams = React.useMemo(
     () => sortLeaderboardTeams(leaderboardTeams),
@@ -499,8 +513,8 @@ export default function HackathonDetailPage({
     try {
       const [leaderboardRes, shortlistedRes] = await Promise.all([
         fetchHackathonLeaderboard(hackathonId, leaderboardStageId),
-        finalStageId
-          ? fetchHackathonShortlistedTeams(hackathonId, finalStageId)
+        leaderboardStageId
+          ? fetchHackathonShortlistedTeams(hackathonId, leaderboardStageId)
           : Promise.resolve(new Response(null, { status: 400 })),
       ]);
 
@@ -537,7 +551,7 @@ export default function HackathonDetailPage({
     } finally {
       setIsLeaderboardLoading(false);
     }
-  }, [hackathonId, leaderboardStageId, finalStageId]);
+  }, [hackathonId, leaderboardStageId]);
 
   React.useEffect(() => {
     if (isLoadingHackathon) return;

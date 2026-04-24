@@ -18,6 +18,8 @@ import {
 } from "../src/db/schema";
 import type { Context } from "hono";
 import type { HonoEnv } from "../types";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
+import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
 
 type StageInput = {
   title?: string;
@@ -116,36 +118,6 @@ const parseScheduleType = (value: unknown): ScheduleType | null => {
 };
 
 const isDateTimeValue = (value: string) => Number.isFinite(Date.parse(value));
-
-const isHackathonAdmin = async (
-  hackathonId: string,
-  userId: string,
-  createdBy: string,
-) => {
-  if (createdBy === userId) return true;
-
-  const role = await db.query.hackathonRoles.findFirst({
-    where: and(
-      eq(hackathonRoles.hackathonId, hackathonId),
-      eq(hackathonRoles.userId, userId),
-      eq(hackathonRoles.role, "admin"),
-    ),
-  });
-
-  return Boolean(role);
-};
-
-const isHackathonJudge = async (hackathonId: string, userId: string) => {
-  const role = await db.query.hackathonRoles.findFirst({
-    where: and(
-      eq(hackathonRoles.hackathonId, hackathonId),
-      eq(hackathonRoles.userId, userId),
-      eq(hackathonRoles.role, "judge"),
-    ),
-  });
-
-  return Boolean(role);
-};
 
 const resolveRoleAssignments = async ({
   creatorId,
@@ -251,39 +223,6 @@ const getHackathonRoleEmails = async (hackathonId: string, creatorId: string) =>
 };
 
 type AppContext = Context<HonoEnv>;
-
-const findMembershipForHackathon = async (
-  userId: string,
-  hackathonId: string,
-) => {
-  const memberships = await db.query.teamMembers.findMany({
-    where: eq(teamMembers.userId, userId),
-    with: { team: true },
-  });
-
-  return memberships.find((m) => m.team.hackathonId === hackathonId) || null;
-};
-
-const ensureParticipant = async (hackathonId: string, userId: string) => {
-  const existing = await db.query.hackathonParticipants.findFirst({
-    where: and(
-      eq(hackathonParticipants.hackathonId, hackathonId),
-      eq(hackathonParticipants.userId, userId),
-    ),
-  });
-
-  if (existing) return existing;
-
-  const newParticipant = {
-    id: crypto.randomUUID(),
-    hackathonId,
-    userId,
-  };
-
-  await db.insert(hackathonParticipants).values(newParticipant);
-
-  return newParticipant;
-};
 
 export const upload = async (c: AppContext) => {
   try {

@@ -416,7 +416,7 @@ export default function HackathonScanPage() {
         </div>
 
         {isAuthorizing ? (
-          <Card className="border-white/10 bg-black/20">
+          <Card className="border-white/10 bg-white/[0.04]">
             <CardContent className="flex items-center gap-3 py-10 text-white/70">
               <Loader2 className="size-5 animate-spin" />
               Verifying access...
@@ -438,7 +438,7 @@ export default function HackathonScanPage() {
           <div className="space-y-4">
             {isScannerActive ? (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
                   <p className="text-xs text-white/70 sm:text-sm">
                     Using {facingMode === "environment" ? "Back" : "Front"} Camera
                   </p>
@@ -461,11 +461,11 @@ export default function HackathonScanPage() {
                   onScan={handleScan}
                   isBusy={isSubmitting}
                   busyText="Validating QR..."
-                  className="border-white/10 bg-black/20"
+                  className="border-white/10 bg-white/[0.04]"
                 />
               </>
             ) : (
-              <Card className="border-white/10 bg-black/20">
+              <Card className="border-white/10 bg-white/[0.04]">
                 <CardHeader>
                   <CardTitle className="inline-flex items-center gap-2 text-white">
                     <ScanLine className="size-5 text-cyan-300" />
@@ -498,7 +498,7 @@ export default function HackathonScanPage() {
               </Card>
             )}
 
-            <Card className="border-white/10 bg-black/20">
+            <Card className="border-white/10 bg-white/[0.04]">
               <CardHeader>
                 <CardTitle className="text-base text-white">Or enter token manually</CardTitle>
               </CardHeader>
@@ -514,7 +514,7 @@ export default function HackathonScanPage() {
                       if (manualInputError) setManualInputError(null);
                     }}
                     placeholder="Enter QR token"
-                    className="w-full border-white/15 bg-black/40 text-white placeholder:text-white/40"
+                    className="w-full border-white/15 bg-white/[0.07] text-white placeholder:text-white/40"
                     disabled={isSubmitting || !isScannerActive}
                   />
                   <Button

@@ -4,6 +4,8 @@ import crypto from "crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../src/db";
 import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
+import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
 const STAGE_TYPES = ["SUBMISSION", "EVALUATION", "FINAL"];
 const SCHEDULE_TYPES = ["entry", "breakfast", "lunch", "dinner"];
 const isFileLike = (value) => !!value &&
@@ -61,20 +63,6 @@ const parseScheduleType = (value) => {
     return SCHEDULE_TYPES.includes(normalized) ? normalized : null;
 };
 const isDateTimeValue = (value) => Number.isFinite(Date.parse(value));
-const isHackathonAdmin = async (hackathonId, userId, createdBy) => {
-    if (createdBy === userId)
-        return true;
-    const role = await db.query.hackathonRoles.findFirst({
-        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "admin")),
-    });
-    return Boolean(role);
-};
-const isHackathonJudge = async (hackathonId, userId) => {
-    const role = await db.query.hackathonRoles.findFirst({
-        where: and(eq(hackathonRoles.hackathonId, hackathonId), eq(hackathonRoles.userId, userId), eq(hackathonRoles.role, "judge")),
-    });
-    return Boolean(role);
-};
 const resolveRoleAssignments = async ({ creatorId, admins, judges, }) => {
     const roleAssignments = new Map();
     roleAssignments.set(creatorId, "admin");
@@ -146,27 +134,6 @@ const getHackathonRoleEmails = async (hackathonId, creatorId) => {
         admins: Array.from(admins),
         judges: Array.from(judges),
     };
-};
-const findMembershipForHackathon = async (userId, hackathonId) => {
-    const memberships = await db.query.teamMembers.findMany({
-        where: eq(teamMembers.userId, userId),
-        with: { team: true },
-    });
-    return memberships.find((m) => m.team.hackathonId === hackathonId) || null;
-};
-const ensureParticipant = async (hackathonId, userId) => {
-    const existing = await db.query.hackathonParticipants.findFirst({
-        where: and(eq(hackathonParticipants.hackathonId, hackathonId), eq(hackathonParticipants.userId, userId)),
-    });
-    if (existing)
-        return existing;
-    const newParticipant = {
-        id: crypto.randomUUID(),
-        hackathonId,
-        userId,
-    };
-    await db.insert(hackathonParticipants).values(newParticipant);
-    return newParticipant;
 };
 export const upload = async (c) => {
     try {

@@ -127,10 +127,10 @@ export function Navbar() {
 
   return (
     <div className="sticky top-4 z-40 px-4 sm:px-6">
-      <div className="premium-nav-glass mx-auto w-full max-w-[1100px] rounded-2xl border border-white/12">
+      <div className="premium-nav-glass mx-auto w-full max-w-[1100px] rounded-2xl border border-white/10">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 text-white">
-            <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/60 via-pink-500/40 to-blue-500/50 shadow-[0_0_0_1px_rgba(255,255,255,0.10)]">
+            <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/50 via-pink-500/35 to-blue-500/40 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
               <Crown className="size-4" />
             </span>
             <span className="text-sm font-semibold tracking-[0.18em]">
@@ -145,8 +145,8 @@ export function Navbar() {
                 href={l.href}
                 className={`text-xs tracking-[0.14em] transition-colors ${
                   pathname.startsWith(l.href)
-                    ? "text-white"
-                    : "text-white/70 hover:text-white"
+                    ? "text-[#e2e4e9]"
+                    : "text-white/65 hover:text-[#e2e4e9]"
                 }`}
               >
                 {l.label}

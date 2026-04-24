@@ -25,7 +25,7 @@ export function FinalRoundScheduleSection({
   onUpdateScheduleTime,
 }: FinalRoundScheduleSectionProps) {
   return (
-    <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+    <Card className="rounded-3xl border border-white/10 bg-white/[0.07] backdrop-blur-xl">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3 border-b border-white/10 pb-4">
           <Clock3 className="size-5 text-amber-300" />
@@ -63,7 +63,7 @@ export function FinalRoundScheduleSection({
                 <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60">
                   <input
                     type="checkbox"
-                    className="size-4 rounded border-white/20 bg-black/20 accent-purple-500"
+                    className="size-4 rounded border-white/20 bg-white/[0.04] accent-purple-500"
                     checked={isEnabled}
                     disabled={isRequired}
                     onChange={() => !isRequired && onToggleSchedule(item.key)}
@@ -88,7 +88,7 @@ export function FinalRoundScheduleSection({
                         event.target.value,
                       )
                     }
-                    className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
                     required={isEnabled}
                     disabled={!isEnabled}
                   />
@@ -105,7 +105,7 @@ export function FinalRoundScheduleSection({
                     onChange={(event) =>
                       onUpdateScheduleTime(item.key, "endTime", event.target.value)
                     }
-                    className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
                     required={isEnabled}
                     disabled={!isEnabled}
                   />

@@ -2,7 +2,6 @@ import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "../src/db";
 import {
-  hackathonParticipants,
   hackathonRoles,
   teamMembers,
   teams,
@@ -14,63 +13,11 @@ import {
 } from "../src/db/schema";
 import type { Context } from "hono";
 import type { HonoEnv } from "../types";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
+import { isHackathonAdmin } from "../lib/functions/roles";
+import { resolveSubmissionStageId } from "../lib/functions/stage";
 
 type AppContext = Context<HonoEnv>;
-
-const findMembershipForHackathon = async (
-  userId: string,
-  hackathonId: string,
-) => {
-  const memberships = await db.query.teamMembers.findMany({
-    where: eq(teamMembers.userId, userId),
-    with: { team: true },
-  });
-
-  return memberships.find((m) => m.team.hackathonId === hackathonId) || null;
-};
-
-const isHackathonAdminParticipant = async (
-  hackathonId: string,
-  userId: string,
-) => {
-  const hackathon = await db.query.hackathons.findFirst({
-    where: eq(hackathons.id, hackathonId),
-  });
-
-  if (!hackathon) return false;
-  if (hackathon.createdBy === userId) return true;
-
-  const adminRole = await db.query.hackathonRoles.findFirst({
-    where: and(
-      eq(hackathonRoles.hackathonId, hackathonId),
-      eq(hackathonRoles.userId, userId),
-      eq(hackathonRoles.role, "admin"),
-    ),
-  });
-
-  return Boolean(adminRole);
-};
-
-const ensureParticipant = async (hackathonId: string, userId: string) => {
-  const existing = await db.query.hackathonParticipants.findFirst({
-    where: and(
-      eq(hackathonParticipants.hackathonId, hackathonId),
-      eq(hackathonParticipants.userId, userId),
-    ),
-  });
-
-  if (existing) return existing;
-
-  const newParticipant = {
-    id: crypto.randomUUID(),
-    hackathonId,
-    userId,
-  };
-
-  await db.insert(hackathonParticipants).values(newParticipant);
-
-  return newParticipant;
-};
 
 export const getTeamDetails = async (c: AppContext) => {
   try {
@@ -124,13 +71,21 @@ export const getTeamDetails = async (c: AppContext) => {
       return c.json({ message: "Stage not found for this hackathon" }, 404);
     }
 
+    const submissionStageId = await resolveSubmissionStageId(
+      team.hackathonId,
+      stage,
+    );
+
     const [members, selectedSubmission] = await Promise.all([
       db.query.teamMembers.findMany({
         where: eq(teamMembers.teamId, teamId),
         with: { user: true },
       }),
       db.query.submissions.findFirst({
-        where: and(eq(submissions.teamId, teamId), eq(submissions.stageId, stageId)),
+        where: and(
+          eq(submissions.teamId, teamId),
+          eq(submissions.stageId, submissionStageId),
+        ),
       }),
     ]);
 
@@ -238,7 +193,7 @@ export const addTeamMember = async (c: AppContext) => {
 
     if (!userToAdd) return c.json({ message: "User not found" }, 400);
 
-    const isAdminParticipant = await isHackathonAdminParticipant(
+    const isAdminParticipant = await isHackathonAdmin(
       team.hackathonId,
       userToAdd.id,
     );
@@ -359,7 +314,7 @@ export const updateTeamMember = async (c: AppContext) => {
       return c.json({ message: "Already processed" }, 409);
 
     if (action === "approve") {
-      const isAdminParticipant = await isHackathonAdminParticipant(
+      const isAdminParticipant = await isHackathonAdmin(
         team.hackathonId,
         targetUserId,
       );
@@ -399,7 +354,7 @@ export const createTeam = async (c: AppContext) => {
     });
     if (!hackathon) return c.json({ message: "Invalid hackathon" }, 400);
 
-    const isAdminParticipant = await isHackathonAdminParticipant(
+    const isAdminParticipant = await isHackathonAdmin(
       hackathonId,
       userId,
     );
@@ -442,7 +397,7 @@ export const createTeam = async (c: AppContext) => {
 
       if (!u || u.id === userId) continue;
 
-      const isMemberAdminParticipant = await isHackathonAdminParticipant(
+      const isMemberAdminParticipant = await isHackathonAdmin(
         hackathonId,
         u.id,
       );

@@ -16,7 +16,7 @@ export const Icon = ({ session }: { session: SessionLike }) => {
   };
 
   return (
-    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500/20 to-pink-500/16 flex items-center justify-center">
       {session?.user?.image && !imgError ? (
         <Image
           src={session.user.image}

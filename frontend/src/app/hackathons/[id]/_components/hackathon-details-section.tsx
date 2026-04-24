@@ -44,7 +44,7 @@ export function HackathonDetailsSection({
               return (
                 <div
                   key={ps.id}
-                  className="rounded-2xl border border-white/10 bg-black/20"
+                  className="rounded-2xl border border-white/10 bg-white/[0.04]"
                 >
                   <button
                     type="button"

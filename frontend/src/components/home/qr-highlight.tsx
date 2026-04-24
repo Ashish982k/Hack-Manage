@@ -172,7 +172,7 @@ export default function QRHighlight() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 hover:bg-white/5 transition-colors duration-300">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:bg-white/5 transition-colors duration-300">
                       <p className="text-xs text-white/60">Student</p>
                       <p className="mt-1 text-sm font-semibold text-white">
                         Aditi Sharma

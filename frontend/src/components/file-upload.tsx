@@ -87,7 +87,7 @@ export function FileUpload({
             </div>
           </div>
         ) : (
-          <div className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex size-10 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
               <FileIcon className="size-5 text-white/80" />
             </div>

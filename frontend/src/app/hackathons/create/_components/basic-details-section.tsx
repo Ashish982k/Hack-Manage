@@ -36,7 +36,7 @@ export function BasicDetailsSection({
   onEndDateChange,
 }: BasicDetailsSectionProps) {
   return (
-    <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+    <Card className="rounded-3xl border border-white/10 bg-white/[0.07] backdrop-blur-xl">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3 border-b border-white/10 pb-4">
           <Info className="size-5 text-blue-400" />
@@ -54,7 +54,7 @@ export function BasicDetailsSection({
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
             placeholder="e.g. CodeFest 2026"
-            className="bg-black/20 border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
+            className="bg-white/[0.04] border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
             required
           />
         </div>
@@ -63,7 +63,7 @@ export function BasicDetailsSection({
           <label className="text-sm font-semibold text-white/90">
             Header Image <span className="text-white/50">(Optional)</span>
           </label>
-          <div className="relative flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/20 p-8 hover:bg-white/5 hover:border-white/30 transition">
+          <div className="relative flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/[0.04] p-8 hover:bg-white/5 hover:border-white/30 transition">
             <input
               type="file"
               className="absolute inset-0 cursor-pointer opacity-0"
@@ -101,7 +101,7 @@ export function BasicDetailsSection({
               value={location}
               onChange={(event) => onLocationChange(event.target.value)}
               placeholder="e.g. Remote, or VJTI Mumbai"
-              className="bg-black/20 border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
+              className="bg-white/[0.04] border-white/10 text-white focus-visible:ring-purple-500/40 rounded-xl"
             />
           </div>
           <div className="space-y-3">
@@ -114,7 +114,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={registrationDeadline}
               onChange={(event) => onRegistrationDeadlineChange(event.target.value)}
-              className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
               required
             />
           </div>
@@ -130,7 +130,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={startDate}
               onChange={(event) => onStartDateChange(event.target.value)}
-              className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
               required
             />
           </div>
@@ -143,7 +143,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={endDate}
               onChange={(event) => onEndDateChange(event.target.value)}
-              className="bg-black/20 border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
               required
             />
           </div>

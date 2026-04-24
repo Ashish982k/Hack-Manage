@@ -12,8 +12,8 @@ import { checkUserByEmail, createTeam } from "@/api";
 function PageGlow() {
   return (
     <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      <div className="absolute left-1/2 top-[-140px] h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/35 via-pink-500/25 to-blue-500/25 blur-3xl" />
-      <div className="absolute right-[-180px] top-[240px] h-[440px] w-[440px] rounded-full bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl" />
+      <div className="absolute left-1/2 top-[-140px] h-[560px] w-[560px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/28 via-pink-500/18 to-blue-500/18 blur-3xl" />
+      <div className="absolute right-[-180px] top-[240px] h-[440px] w-[440px] rounded-full bg-gradient-to-br from-blue-500/16 via-purple-500/16 to-pink-500/16 blur-3xl" />
     </div>
   );
 }
@@ -119,7 +119,7 @@ export default function CreateTeamPage({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/25 ring-1 ring-white/10">
+              <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/25 via-pink-500/15 to-blue-500/18 ring-1 ring-white/10">
                 <Users className="size-5 text-white/80" />
               </span>
               <div>
@@ -150,7 +150,7 @@ export default function CreateTeamPage({
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="Neon Debuggers"
                   disabled={isSubmitting}
-                  className="bg-black/20"
+                  className="bg-white/[0.04]"
                 />
                 <p className="text-xs text-white/50">
                   You will be assigned as the team leader
@@ -179,7 +179,7 @@ export default function CreateTeamPage({
                         placeholder="member@example.com"
                         type="email"
                         disabled={isSubmitting}
-                        className="bg-black/20"
+                        className="bg-white/[0.04]"
                       />
 
                       {members.length > 1 && (

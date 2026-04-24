@@ -231,7 +231,7 @@ export default function Hero() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 hover:bg-white/5 transition-colors duration-300">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:bg-white/5 transition-colors duration-300">
                       <div className="flex items-center gap-2 text-white/80">
                         <Users className="size-4" />
                         <span className="text-sm">Registered</span>
@@ -243,7 +243,7 @@ export default function Hero() {
                         +22% this week
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 hover:bg-white/5 transition-colors duration-300">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:bg-white/5 transition-colors duration-300">
                       <div className="flex items-center gap-2 text-white/80">
                         <Boxes className="size-4" />
                         <span className="text-sm">Teams</span>
@@ -255,7 +255,7 @@ export default function Hero() {
                         Auto-balanced invites
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 hover:bg-white/5 transition-colors duration-300">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:bg-white/5 transition-colors duration-300">
                       <div className="flex items-center gap-2 text-white/80">
                         <QrCode className="size-4" />
                         <span className="text-sm">QR Check-ins</span>
@@ -267,7 +267,7 @@ export default function Hero() {
                         No duplicates
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 hover:bg-white/5 transition-colors duration-300">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:bg-white/5 transition-colors duration-300">
                       <div className="flex items-center gap-2 text-white/80">
                         <BarChart3 className="size-4" />
                         <span className="text-sm">Avg. Score</span>

@@ -303,7 +303,7 @@ export default function TeamManagementPage({
               </div>
             ) : (
               <>
-                <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <p className="text-sm font-semibold text-white/90">Team Name</p>
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Input
@@ -325,7 +325,7 @@ export default function TeamManagementPage({
                   ) : null}
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <p className="text-sm font-semibold text-white/90">
                     Add Team Member
                   </p>
@@ -370,7 +370,7 @@ export default function TeamManagementPage({
                     return (
                       <div
                         key={member.id}
-                        className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                        className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>

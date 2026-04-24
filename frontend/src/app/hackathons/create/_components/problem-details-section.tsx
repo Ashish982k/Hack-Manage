@@ -30,7 +30,7 @@ export function ProblemDetailsSection({
   onDescriptionChange,
 }: ProblemDetailsSectionProps) {
   return (
-    <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl">
+    <Card className="rounded-3xl border border-white/10 bg-white/[0.07] backdrop-blur-xl">
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3 border-b border-white/10 pb-4">
           <FileText className="size-5 text-purple-400" />
@@ -47,7 +47,7 @@ export function ProblemDetailsSection({
         <div className="relative border-l border-white/10 ml-4 space-y-8 pb-4">
           {problemStatements.map((statement, index) => (
             <div key={statement.id} className="relative pl-8">
-              <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-black ring-2 ring-white/10">
+              <span className="absolute -left-3 top-2 flex size-6 items-center justify-center rounded-full bg-[#0c0e14] ring-2 ring-white/10">
                 <span className="size-2.5 rounded-full bg-purple-500" />
               </span>
 
@@ -78,7 +78,7 @@ export function ProblemDetailsSection({
                         )
                       }
                       placeholder="e.g. Build an AI tutor for campus support"
-                      className="bg-black/20 border-white/10 text-white font-medium focus-visible:ring-purple-500/40 rounded-xl"
+                      className="bg-white/[0.04] border-white/10 text-white font-medium focus-visible:ring-purple-500/40 rounded-xl"
                       required
                     />
                   </div>
@@ -98,7 +98,7 @@ export function ProblemDetailsSection({
                         )
                       }
                       placeholder="Add extra context, constraints, or goals for this statement..."
-                      className="block w-full min-h-24 resize-y rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      className="block w-full min-h-24 resize-y rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                     />
                   </div>
                 </div>
@@ -127,7 +127,7 @@ export function ProblemDetailsSection({
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
           placeholder="Include background context, expected deliverables, and marking criteria..."
-          className="block min-h-48 w-full resize-y rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          className="block min-h-48 w-full resize-y rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
         />
       </CardContent>
     </Card>

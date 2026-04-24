@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { flushSync } from "react-dom";
 import { gsap } from "gsap";
-import { Flip, MorphSVGPlugin, Observer, ScrollTrigger, SplitText } from "gsap/all";
+import { Flip, Observer, ScrollTrigger, SplitText } from "gsap/all";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
@@ -19,15 +19,11 @@ import {
   Users,
 } from "lucide-react";
 
+import { HackathonCore3D } from "@/components/home/hackathon-core-3d";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-gsap.registerPlugin(ScrollTrigger, Observer, MorphSVGPlugin, Flip, SplitText);
-
-const MORPH_PATH_A =
-  "M49 6C60.7 10.4 70.9 17.6 74.7 28.5C78.6 39.4 76.2 54 68.2 64.1C60.2 74.2 46.7 79.7 33.9 77.5C21.1 75.3 9 65.4 5.6 52.7C2.3 40 7.7 24.5 18 15.8C28.2 7.1 37.3 1.6 49 6Z";
-const MORPH_PATH_B =
-  "M47 3.8C59.8 2.8 74.9 6.5 79.8 16.8C84.8 27.2 79.7 44.3 71.2 56.8C62.7 69.3 50.8 77.2 36.6 78.6C22.5 80.1 6 75.2 2.4 64.4C-1.2 53.6 8.2 37 16.1 24.2C24 11.4 34.1 4.8 47 3.8Z";
+gsap.registerPlugin(ScrollTrigger, Observer, Flip, SplitText);
 
 const SECTION_NAV = [
   { id: "hero", label: "Overview" },
@@ -138,7 +134,6 @@ export function HomePage() {
   const rootRef = React.useRef<HTMLElement>(null);
   const headerRef = React.useRef<HTMLElement>(null);
   const progressRef = React.useRef<HTMLDivElement>(null);
-  const heroShapeRef = React.useRef<SVGPathElement>(null);
   const capabilityGridRef = React.useRef<HTMLDivElement>(null);
   const journeyDeckRef = React.useRef<HTMLDivElement>(null);
 
@@ -196,14 +191,21 @@ export function HomePage() {
 
     cards.forEach((card, index) => {
       const offset = index - activeJourneyIndex;
+      const distance = Math.abs(offset);
+      const isActive = distance === 0;
+      card.dataset.active = isActive ? "true" : "false";
+      card.style.pointerEvents = isActive ? "auto" : "none";
+
       gsap.to(card, {
-        yPercent: offset * 13,
-        xPercent: Math.abs(offset) * 3,
-        scale: offset === 0 ? 1 : 0.94,
-        autoAlpha: Math.abs(offset) > 2 ? 0 : 1,
-        zIndex: JOURNEY_PANELS.length - Math.abs(offset),
-        duration: 0.55,
+        yPercent: offset * 15,
+        xPercent: offset * 2.5,
+        scale: isActive ? 1 : 0.9,
+        autoAlpha: isActive ? 1 : Math.max(0.16, 0.55 - distance * 0.18),
+        filter: `blur(${isActive ? 0 : Math.min(2.4, distance * 1.1)}px)`,
+        zIndex: isActive ? 30 : 20 - distance,
+        duration: 0.6,
         ease: "power3.out",
+        overwrite: true,
       });
     });
   }, [activeJourneyIndex]);
@@ -265,28 +267,6 @@ export function HomePage() {
           },
         });
       });
-
-      if (heroShapeRef.current && !prefersReducedMotion) {
-        gsap.to(heroShapeRef.current, {
-          morphSVG: MORPH_PATH_B,
-          repeat: -1,
-          yoyo: true,
-          duration: 2.9,
-          ease: "sine.inOut",
-        });
-
-        gsap.to(heroShapeRef.current, {
-          rotation: 90,
-          transformOrigin: "50% 50%",
-          ease: "none",
-          scrollTrigger: {
-            trigger: "#hero",
-            start: "top top",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
-      }
 
       const sectionNodes = SECTION_NAV.map(({ id }) =>
         document.getElementById(id),
@@ -425,7 +405,7 @@ export function HomePage() {
       </header>
 
       <aside className="fixed right-6 top-1/2 z-40 hidden -translate-y-1/2 xl:block">
-        <div className="rounded-full border border-white/10 bg-black/30 p-2 backdrop-blur-md">
+        <div className="rounded-full border border-white/10 bg-white/[0.06] p-2 backdrop-blur-md">
           {SECTION_NAV.map((item, index) => (
             <button
               key={item.id}
@@ -476,42 +456,22 @@ export function HomePage() {
             </div>
           </div>
 
-          <div data-reveal className="premium-card rounded-[28px] border border-white/12 p-6 sm:p-8">
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-sm text-white/68">Live orchestration layer</p>
-              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
-                Active
-              </span>
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-[1fr_1.1fr]">
-              <div className="premium-card rounded-2xl border border-white/12 p-5">
-                <svg viewBox="0 0 88 88" className="mx-auto size-24 text-white/90">
-                  <path
-                    ref={heroShapeRef}
-                    d={MORPH_PATH_A}
-                    fill="currentColor"
-                    fillOpacity="0.95"
-                  />
-                </svg>
-                <p className="mt-4 text-center text-sm text-white/64">Morphing gate identity</p>
-              </div>
-
-              <div className="grid gap-3">
-                {[
-                  { label: "Participants", value: "1,248" },
-                  { label: "Teams", value: "312" },
-                  { label: "Secure scans", value: "968" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3"
-                  >
-                    <p className="text-xs uppercase tracking-[0.14em] text-white/52">{item.label}</p>
-                    <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{item.value}</p>
-                  </div>
-                ))}
-              </div>
+          <div data-reveal className="space-y-4">
+            <HackathonCore3D />
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Participants", value: "1,248" },
+                { label: "Teams", value: "312" },
+                { label: "Secure scans", value: "968" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="premium-card rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3"
+                >
+                  <p className="text-xs uppercase tracking-[0.14em] text-white/52">{item.label}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{item.value}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -585,28 +545,55 @@ export function HomePage() {
             </p>
             <p data-reveal className="inline-flex items-center gap-2 text-xs tracking-[0.16em] text-white/56">
               <ArrowRight className="size-3.5" />
-              Wheel or swipe directly on the stack
+              Wheel, swipe, or tap a step
             </p>
           </div>
 
-          <div ref={journeyDeckRef} data-reveal className="relative h-[360px] touch-pan-y select-none">
+          <div
+            ref={journeyDeckRef}
+            data-reveal
+            className="relative h-[420px] touch-pan-y select-none [perspective:1200px]"
+          >
             {JOURNEY_PANELS.map((panel, index) => (
               <article
                 key={panel.title}
                 data-journey-card
-                className="premium-card absolute inset-0 rounded-3xl border border-white/12 p-8"
+                className="premium-card absolute inset-0 rounded-3xl border border-white/14 p-8 sm:p-10"
+                style={{
+                  background:
+                    "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(12,14,20,0.96)",
+                }}
               >
-                <p className="text-xs tracking-[0.16em] text-white/52">{panel.tag}</p>
-                <h3 className="mt-6 max-w-md text-3xl font-semibold tracking-tight text-white">
-                  {panel.title}
-                </h3>
-                <p className="mt-5 max-w-md text-base leading-relaxed text-white/66">
-                  {panel.description}
-                </p>
-                <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-xs text-white/62">
-                  State {index + 1} of {JOURNEY_PANELS.length}
+                <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(360px_220px_at_10%_0%,rgba(125,211,252,0.09),rgba(12,14,20,0))]" />
+                <div className="relative">
+                  <p className="text-xs tracking-[0.16em] text-white/52">{panel.tag}</p>
+                  <h3 className="mt-6 max-w-md text-3xl font-semibold tracking-tight text-white">
+                    {panel.title}
+                  </h3>
+                  <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70">
+                    {panel.description}
+                  </p>
+                  <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/[0.06] px-4 py-2 text-xs text-white/66">
+                    State {index + 1} of {JOURNEY_PANELS.length}
+                  </div>
                 </div>
               </article>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 lg:col-start-2">
+            {JOURNEY_PANELS.map((panel, index) => (
+              <button
+                key={panel.tag}
+                type="button"
+                onClick={() => setActiveJourneyIndex(index)}
+                className={`rounded-full border px-4 py-2 text-[11px] tracking-[0.14em] transition-colors ${
+                  activeJourneyIndex === index
+                    ? "border-white/35 bg-white/12 text-white"
+                    : "border-white/14 bg-white/[0.03] text-white/60 hover:text-white"
+                }`}
+              >
+                {panel.tag}
+              </button>
             ))}
           </div>
         </div>

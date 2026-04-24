@@ -179,7 +179,7 @@ export default function HackathonQrPage() {
         </div>
 
         {isLoading ? (
-          <Card className="border-white/10 bg-black/30">
+          <Card className="border-white/10 bg-white/[0.06]">
             <CardContent className="flex items-center gap-3 py-10 text-white/70">
               <Loader2 className="size-5 animate-spin text-purple-300" />
               Loading your QR codes...
@@ -193,7 +193,7 @@ export default function HackathonQrPage() {
             </CardContent>
           </Card>
         ) : qrCodes.length === 0 ? (
-          <Card className="border-white/10 bg-black/30">
+          <Card className="border-white/10 bg-white/[0.06]">
             <CardContent className="py-12 text-center">
               <p className="text-base text-white/80">
                 No QR codes available yet. Please contact the admin.

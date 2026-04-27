@@ -1,10 +1,10 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { db } from "../src/db";
-import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema";
-import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
-import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
-import { uploadImageToCloudinary } from "../lib/functions/cloudinary";
+import { db } from "../src/db/index.js";
+import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema.js";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
+import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles.js";
+import { uploadImageToCloudinary } from "../lib/functions/cloudinary.js";
 const STAGE_TYPES = ["SUBMISSION", "EVALUATION", "FINAL"];
 const SCHEDULE_TYPES = ["entry", "breakfast", "lunch", "dinner"];
 const isFileLike = (value) => !!value &&

@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db } from "../../src/db";
-import { stages } from "../../src/db/schema";
+import { db } from "../../src/db/index.js";
+import { stages } from "../../src/db/schema.js";
 export const resolveSubmissionStageId = async (hackathonId, stage) => {
     if (stage.type !== "EVALUATION")
         return stage.id;

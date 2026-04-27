@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
-import { db } from "../../src/db";
-import { hackathonParticipants, teamMembers } from "../../src/db/schema";
+import { db } from "../../src/db/index.js";
+import { hackathonParticipants, teamMembers } from "../../src/db/schema.js";
 export const findMembershipForHackathon = async (userId, hackathonId) => {
     const memberships = await db.query.teamMembers.findMany({
         where: eq(teamMembers.userId, userId),

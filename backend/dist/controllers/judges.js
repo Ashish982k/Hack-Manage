@@ -1,11 +1,11 @@
 import crypto from "crypto";
-import { teams, submissions, stages, evaluations, shortlistedTeams, } from "../src/db/schema";
+import { teams, submissions, stages, evaluations, shortlistedTeams, } from "../src/db/schema.js";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
-import { db } from "../src/db";
-import { sendWinnerEmails } from "./mail";
-import { getUserIdFromContext } from "../lib/functions/auth";
-import { isHackathonJudge, isHackathonJudgeOrAdmin } from "../lib/functions/roles";
-import { resolveSubmissionStageId } from "../lib/functions/stage";
+import { db } from "../src/db/index.js";
+import { sendWinnerEmails } from "./mail.js";
+import { getUserIdFromContext } from "../lib/functions/auth.js";
+import { isHackathonJudge, isHackathonJudgeOrAdmin } from "../lib/functions/roles.js";
+import { resolveSubmissionStageId } from "../lib/functions/stage.js";
 export const getSubmissions = async (c) => {
     try {
         const userId = getUserIdFromContext(c);

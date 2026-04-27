@@ -2,9 +2,9 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { eq } from "drizzle-orm";
 
-import { auth } from "../lib/auth";
+import { auth } from "../lib/auth.js";
 import { db } from "./db";
-import { user } from "./db/schema";
+import { user } from "./db/schema.js";
 import Teams from "../routers/team";
 import Hack from "../routers/hack";
 

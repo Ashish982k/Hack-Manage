@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import dotenv from "dotenv";
-import app from "./app";
+import app from "./app.js";
 dotenv.config();
 serve({
     fetch: app.fetch,

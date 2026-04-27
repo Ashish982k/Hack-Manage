@@ -1,8 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../src/db/index";
+import { db } from "../src/db/index.js";
 import { openAPI } from "better-auth/plugins";
-import * as schema from "../src/db/schema";
+import * as schema from "../src/db/schema.js";
 import "dotenv/config";
 export const auth = betterAuth({
     database: drizzleAdapter(db, {

@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias --resolve-full-paths",
     "start": "node dist/index.js",
     "dev:vercel": "vercel dev",
     "deploy": "vercel --prod"
@@ -26,6 +26,7 @@
     "@types/node": "^20.11.17",
     "@types/nodemailer": "^8.0.0",
     "drizzle-kit": "^0.31.10",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   }

@@ -1,5 +1,5 @@
-import { db } from "../src/db";
-import { shortlistedTeams, hackathonSchedules, teamMembers, hackathonRoles, stages, qrCodes, teams, } from "../src/db/schema";
+import { db } from "../src/db/index.js";
+import { shortlistedTeams, hackathonSchedules, teamMembers, hackathonRoles, stages, qrCodes, teams, } from "../src/db/schema.js";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import crypto from "crypto";
 const resolveFinalStage = async (hackathonId) => {

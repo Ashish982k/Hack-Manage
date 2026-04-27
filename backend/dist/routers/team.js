@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { addTeamMember, createTeam, getTeamDetails, removeTeamMember, updateTeam, updateTeamMember, } from "../controllers/team";
-import { authMiddleware } from "../middleware/auth.middleware";
+import { addTeamMember, createTeam, getTeamDetails, removeTeamMember, updateTeam, updateTeamMember, } from "../controllers/team.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 const Teams = new Hono();
 Teams.use("*", authMiddleware);
 Teams.post("/", createTeam);

@@ -1,6 +1,6 @@
-import { transporter } from "../lib/mailer";
-import { db } from "../src/db";
-import { hackathonRoles, teams, submissions, stages, evaluations, shortlistedTeams, teamMembers, user, } from "../src/db/schema";
+import { transporter } from "../lib/mailer.js";
+import { db } from "../src/db/index.js";
+import { hackathonRoles, teams, submissions, stages, evaluations, shortlistedTeams, teamMembers, user, } from "../src/db/schema.js";
 import { and, eq, inArray } from "drizzle-orm/sql/expressions/conditions";
 import { desc, sql } from "drizzle-orm";
 export const sendWinnerEmails = async (hackathonId) => {

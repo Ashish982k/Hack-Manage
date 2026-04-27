@@ -1,5 +1,5 @@
-import { hackathonRoles } from "../src/db/schema";
-import { db } from "../src/db";
+import { hackathonRoles } from "../src/db/schema.js";
+import { db } from "../src/db/index.js";
 import { eq, and } from "drizzle-orm";
 export const judgeMiddleware = async (c, next) => {
     try {

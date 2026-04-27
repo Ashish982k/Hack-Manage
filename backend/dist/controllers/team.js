@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
-import { db } from "../src/db";
-import { hackathonRoles, teamMembers, teams, hackathons, stages, submissions, evaluations, user, } from "../src/db/schema";
-import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
-import { isHackathonAdmin } from "../lib/functions/roles";
-import { resolveSubmissionStageId } from "../lib/functions/stage";
+import { db } from "../src/db/index.js";
+import { hackathonRoles, teamMembers, teams, hackathons, stages, submissions, evaluations, user, } from "../src/db/schema.js";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
+import { isHackathonAdmin } from "../lib/functions/roles.js";
+import { resolveSubmissionStageId } from "../lib/functions/stage.js";
 export const getTeamDetails = async (c) => {
     try {
         const teamId = c.req.param("id");

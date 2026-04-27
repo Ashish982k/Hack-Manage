@@ -382,7 +382,7 @@ export function HomePage() {
                 key={item.id}
                 type="button"
                 onClick={() => jumpToSection(item.id)}
-                className={`text-xs tracking-[0.16em] transition-colors ${
+                className={`text-xs tracking-[0.16em] font-bold transition-colors ${
                   activeSection === index ? "text-white" : "text-white/55 hover:text-white/80"
                 }`}
               >
@@ -561,11 +561,11 @@ export function HomePage() {
                 className="premium-card absolute inset-0 rounded-3xl border border-white/14 p-8 sm:p-10"
                 style={{
                   background:
-                    "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)), rgba(12,14,20,0.96)",
+                    "linear-gradient(160deg, rgba(255, 255, 255, 0.47), rgba(255, 255, 255, 0.24)), rgba(12, 14, 20, 0.67)",
                 }}
               >
                 <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(360px_220px_at_10%_0%,rgba(125,211,252,0.09),rgba(12,14,20,0))]" />
-                <div className="relative">
+                <div className="relative font-bold">
                   <p className="text-xs tracking-[0.16em] text-white/52">{panel.tag}</p>
                   <h3 className="mt-6 max-w-md text-3xl font-semibold tracking-tight text-white">
                     {panel.title}

@@ -16,7 +16,7 @@ export const Icon = ({ session }: { session: SessionLike }) => {
   };
 
   return (
-    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-purple-500/20 to-pink-500/16 flex items-center justify-center">
+    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#E36A6A]/20 to-[#FFB2B2]/20 flex items-center justify-center">
       {session?.user?.image && !imgError ? (
         <Image
           src={session.user.image}
@@ -28,7 +28,7 @@ export const Icon = ({ session }: { session: SessionLike }) => {
           loading="lazy"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-purple-500/30 to-pink-500/30" />
+        <div className="w-full h-full bg-gradient-to-br from-[#E36A6A]/35 to-[#FFB2B2]/35" />
       )}
     </div>
   );

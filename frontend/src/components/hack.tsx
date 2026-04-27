@@ -18,12 +18,18 @@ type HackathonCard = {
   enddate: string;
 };
 
+const resolveImageUrl = (imagePath: string) => {
+  const trimmed = imagePath.trim();
+  if (!trimmed) return "/file.svg";
+  return buildApiAssetUrl(trimmed);
+};
+
 function Glow() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-      <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-purple-500/28 via-pink-500/18 to-blue-500/18 blur-3xl" />
-      <div className="absolute right-[-140px] top-[220px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-blue-500/16 via-purple-500/16 to-pink-500/16 blur-3xl" />
-      <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-pink-500/16 via-purple-500/16 to-blue-500/12 blur-3xl" />
+      <div className="absolute left-1/2 top-[-120px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-gradient-to-br from-[#E36A6A]/24 via-[#FFB2B2]/20 to-[#FFF2D0]/28 blur-3xl" />
+      <div className="absolute right-[-140px] top-[220px] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-[#FFB2B2]/18 via-[#FFF2D0]/26 to-[#E36A6A]/14 blur-3xl" />
+      <div className="absolute bottom-[-220px] left-[-160px] h-[520px] w-[520px] rounded-full bg-gradient-to-br from-[#FFF2D0]/28 via-[#FFB2B2]/16 to-[#E36A6A]/14 blur-3xl" />
     </div>
   );
 }
@@ -84,7 +90,7 @@ export default function HackathonsClient({
                 {/* IMAGE */}
                 <div className="relative h-44 w-full overflow-hidden">
                   <Image
-                    src={buildApiAssetUrl(`images/${hackathon.headerImg}`)}
+                    src={resolveImageUrl(hackathon.headerImg)}
                     alt={hackathon.title}
                     className="h-full w-full object-cover opacity-80 transition group-hover:opacity-100 group-hover:scale-[1.02]"
                   />

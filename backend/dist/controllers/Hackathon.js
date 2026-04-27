@@ -1,11 +1,10 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import crypto from "crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../src/db";
 import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema";
 import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
 import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
+import { uploadImageToCloudinary } from "../lib/functions/cloudinary";
 const STAGE_TYPES = ["SUBMISSION", "EVALUATION", "FINAL"];
 const SCHEDULE_TYPES = ["entry", "breakfast", "lunch", "dinner"];
 const isFileLike = (value) => !!value &&
@@ -248,21 +247,20 @@ export const newHackathon = async (c) => {
             .toLowerCase()
             .replace(/\s+/g, "-")
             .replace(/[^a-z0-9-]/g, "");
-        let filePath;
+        let headerImageUrl;
         if (file) {
-            const ext = file.name.split(".").pop();
-            const fileName = `${Date.now()}-${safeTitle}${ext ? `.${ext}` : ""}`;
-            filePath = path.join("images", fileName);
-            await mkdir(path.dirname(filePath), { recursive: true });
             const buffer = Buffer.from(await file.arrayBuffer());
-            await writeFile(filePath, buffer);
+            headerImageUrl = await uploadImageToCloudinary(buffer, {
+                folder: process.env.CLOUDINARY_FOLDER ?? "hackathon-headers",
+                public_id: `${safeTitle || "hackathon-header"}-${Date.now()}`,
+            });
         }
         const hackathonId = crypto.randomUUID();
         await db.insert(hackathons).values({
             id: hackathonId,
             title,
             description: body.description,
-            headerImage: filePath ?? null,
+            headerImage: headerImageUrl ?? null,
             startDate: body.startDate,
             endDate: body.endDate,
             registrationDeadline: body.registrationDeadline,
@@ -313,7 +311,7 @@ export const newHackathon = async (c) => {
         return c.json({
             message: "Hackathon created successfully",
             hackathonId,
-            filePath,
+            filePath: headerImageUrl,
         });
     }
     catch (error) {

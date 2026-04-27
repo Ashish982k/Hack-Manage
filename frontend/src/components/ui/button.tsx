@@ -5,18 +5,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-[0.02em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0e14] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-[0.02em] transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E36A6A]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFBF1] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "premium-card border border-white/10 bg-white/[0.05] text-[#e2e4e9] shadow-sm hover:bg-white/[0.09]",
+          "premium-card border border-[#f2dcc2] bg-[#fff7e3] text-[#4f453f] shadow-sm hover:bg-[#ffefdc]",
         primary:
-          "bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_14px_40px_rgba(124,58,237,0.28)] hover:brightness-110",
+          "border border-[#d65f5f] bg-[#E36A6A] text-[#fffaf5] shadow-[0_0_0_1px_rgba(255,255,255,0.32),0_12px_30px_rgba(227,106,106,0.25)] hover:bg-[#cf5d5d]",
         outline:
-          "border border-white/12 bg-white/[0.025] text-[#e2e4e9] hover:bg-white/[0.06]",
+          "border border-[#f2dcc2] bg-[#fffbf1] text-[#4f453f] hover:bg-[#fff2d0]",
         ghost:
-          "bg-transparent text-[#c8cad0] hover:bg-white/[0.05] hover:text-[#e2e4e9]",
+          "bg-transparent text-[#746860] hover:bg-[#ffefdc] hover:text-[#4f453f]",
       },
       size: {
         default: "h-11 px-5",

@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="app-theme flex min-h-full flex-col bg-[#0c0e14] text-[#e2e4e9] selection:bg-purple-500/25">
+      <body className="app-theme flex min-h-full flex-col bg-[#FFFBF1] text-[#4F453F] selection:bg-[#FFB2B2]/50">
         {children}
       </body>
     </html>

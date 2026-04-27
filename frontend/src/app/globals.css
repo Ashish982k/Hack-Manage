@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fffbf1;
+  --foreground: #4f453f;
+  --surface: #fff2d0;
+  --surface-raised: #fff7e3;
+  --accent: #ffb2b2;
+  --action: #e36a6a;
+  --text-primary: #4f453f;
+  --text-muted: #746860;
+  --border-soft: #f2dcc2;
+  --shadow-soft: rgba(118, 83, 83, 0.12);
 }
 
 @theme inline {
@@ -10,22 +18,15 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-accent: var(--accent);
+  --color-action: var(--action);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0e14;
-    --foreground: #e2e4e9;
-    --surface: rgba(255, 255, 255, 0.04);
-    --surface-raised: rgba(255, 255, 255, 0.065);
-  }
-}
-
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   letter-spacing: 0.01em;
   text-rendering: geometricPrecision;
@@ -168,24 +169,29 @@ html {
    ═══════════════════════════════════════════════════════════════════════════ */
 .cinematic-card {
   box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 20px 70px -15px rgba(168, 95, 247, 0.12),
-    0 40px 100px -20px rgba(69, 140, 246, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--border-soft) 80%, white),
+    0 20px 50px -20px rgba(227, 106, 106, 0.2),
+    0 30px 70px -30px rgba(255, 178, 178, 0.25);
   transition: box-shadow 500ms ease, transform 300ms ease;
 }
 
 .cinematic-card:hover {
   box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 25px 80px -10px rgba(168, 95, 247, 0.2),
-    0 50px 120px -20px rgba(69, 140, 246, 0.12);
+    0 0 0 1px color-mix(in srgb, var(--border-soft) 90%, white),
+    0 22px 55px -18px rgba(227, 106, 106, 0.24),
+    0 34px 80px -26px rgba(255, 178, 178, 0.24);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GRADIENT TEXT - Premium heading effect
    ═══════════════════════════════════════════════════════════════════════════ */
 .gradient-text {
-  background: linear-gradient(135deg, #e8eaf0 0%, rgba(226, 228, 233, 0.78) 50%, #e8eaf0 100%);
+  background: linear-gradient(
+    135deg,
+    #e36a6a 0%,
+    #d87e7e 45%,
+    #4f453f 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -229,20 +235,20 @@ html {
   background:
     radial-gradient(
       1600px 900px at 8% -10%,
-      rgba(165, 99, 255, 0.18),
-      rgba(165, 99, 255, 0) 55%
+      rgba(227, 106, 106, 0.14),
+      rgba(227, 106, 106, 0) 55%
     ),
     radial-gradient(
       1400px 700px at 92% 0%,
-      rgba(69, 192, 255, 0.14),
-      rgba(69, 192, 255, 0) 48%
+      rgba(255, 178, 178, 0.2),
+      rgba(255, 178, 178, 0) 48%
     ),
     radial-gradient(
       900px 600px at 50% 120%,
-      rgba(255, 130, 206, 0.08),
-      rgba(255, 130, 206, 0) 65%
+      rgba(255, 242, 208, 0.8),
+      rgba(255, 242, 208, 0) 65%
     ),
-    #0c0e14;
+    var(--background);
 }
 
 .premium-page {
@@ -251,20 +257,20 @@ html {
   background:
     radial-gradient(
       1300px 650px at 8% -8%,
-      rgba(165, 99, 255, 0.16),
-      rgba(165, 99, 255, 0) 55%
+      rgba(227, 106, 106, 0.13),
+      rgba(227, 106, 106, 0) 55%
     ),
     radial-gradient(
       1100px 560px at 90% 2%,
-      rgba(69, 192, 255, 0.12),
-      rgba(69, 192, 255, 0) 52%
+      rgba(255, 178, 178, 0.2),
+      rgba(255, 178, 178, 0) 52%
     ),
     radial-gradient(
       850px 500px at 52% 115%,
-      rgba(255, 130, 206, 0.08),
-      rgba(255, 130, 206, 0) 62%
+      rgba(255, 242, 208, 0.8),
+      rgba(255, 242, 208, 0) 62%
     ),
-    #0c0e14;
+    var(--background);
   animation: premiumPageIn 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -276,8 +282,8 @@ html {
   z-index: -1;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.025),
-    rgba(255, 255, 255, 0.008) 30%,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.2) 30%,
     rgba(255, 255, 255, 0)
   );
 }
@@ -297,20 +303,20 @@ html {
 .premium-nav-glass {
   backdrop-filter: blur(20px) saturate(130%);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
-    rgba(14, 16, 24, 0.78);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 250, 236, 0.72)),
+    rgba(255, 242, 208, 0.78);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.1) inset,
-    0 24px 60px rgba(6, 10, 28, 0.4);
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 16px 36px var(--shadow-soft);
 }
 
 .premium-card {
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
-    rgba(14, 17, 26, 0.52);
+    linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.28)),
+    var(--surface);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.08) inset,
-    0 24px 70px rgba(6, 10, 28, 0.36);
+    0 1px 0 rgba(255, 255, 255, 0.78) inset,
+    0 10px 30px var(--shadow-soft);
   transition:
     transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 300ms ease,
@@ -318,24 +324,24 @@ html {
 }
 
 .premium-card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border-soft));
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.14) inset,
-    0 30px 80px rgba(32, 41, 96, 0.3);
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 14px 36px rgba(227, 106, 106, 0.18);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INNER SURFACES - Softer nested containers
    ═══════════════════════════════════════════════════════════════════════════ */
 .inner-surface {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid color-mix(in srgb, var(--border-soft) 75%, white);
+  box-shadow: 0 2px 8px rgba(118, 83, 83, 0.08);
 }
 
 .inner-surface:hover {
-  background: rgba(255, 255, 255, 0.055);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border-soft));
 }
 
 .app-theme button,
@@ -353,6 +359,42 @@ html {
 .app-theme a:hover,
 .app-theme [role="button"]:hover {
   transform: translateY(-1px);
+}
+
+/* Global pastel overrides for legacy dark utility classes */
+.app-theme .text-white,
+.app-theme .text-\[\#e2e4e9\],
+.app-theme .text-\[\#c8cad0\] {
+  color: var(--text-primary) !important;
+}
+
+.app-theme .text-\[\#a0a3ab\],
+.app-theme [class*="text-white/"] {
+  color: var(--text-muted) !important;
+}
+
+.app-theme .bg-\[\#0c0e14\] {
+  background-color: var(--background) !important;
+}
+
+.app-theme [class*="border-white/"] {
+  border-color: color-mix(in srgb, var(--border-soft) 75%, white) !important;
+}
+
+.app-theme [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.56) !important;
+}
+
+.app-theme [class*="bg-black/"] {
+  background-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.app-theme .text-black {
+  color: var(--text-primary) !important;
+}
+
+.app-theme [class*="ring-white/"] {
+  --tw-ring-color: color-mix(in srgb, var(--border-soft) 75%, white) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

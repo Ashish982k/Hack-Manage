@@ -22,6 +22,15 @@ export const fetchFromApi = (path: string, init: RequestInit = {}) =>
   });
 
 export const buildApiAssetUrl = (assetPath: string) => {
-  const normalizedAssetPath = assetPath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const normalizedInput = assetPath.trim();
+
+  if (
+    /^https?:\/\//i.test(normalizedInput) ||
+    normalizedInput.startsWith("data:")
+  ) {
+    return normalizedInput;
+  }
+
+  const normalizedAssetPath = normalizedInput.replace(/\\/g, "/").replace(/^\/+/, "");
   return `${BACKEND_URL}/${normalizedAssetPath}`;
 };

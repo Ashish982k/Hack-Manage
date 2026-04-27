@@ -1,6 +1,6 @@
 import { db } from "../src/db";
-import { evaluations, hackathonParticipants, qrCodes, hackathonRoles, hackathons, problemStatements, shortlistedTeams, stages, submissions, teamMembers, teams, } from "../src/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { evaluations, hackathonParticipants, qrCodes, hackathonRoles, hackathons, problemStatements, shortlistedTeams, stages, submissions, teamMembers, teams, user, } from "../src/db/schema";
+import { and, eq, inArray, or } from "drizzle-orm";
 export const deleteHackathon = async (c) => {
     const id = c.req.param("id");
     const currentUser = c.get("user");

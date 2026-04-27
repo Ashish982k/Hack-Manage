@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../src/db/index";
 import { openAPI } from "better-auth/plugins";
-import * as schema from '../src/db/schema';
+import * as schema from "../src/db/schema";
 import "dotenv/config";
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
@@ -20,10 +20,8 @@ export const auth = betterAuth({
         github: {
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        }
+        },
     },
     trustedOrigins: ["http://localhost:3000"],
-    plugins: [
-        openAPI()
-    ]
+    plugins: [openAPI()],
 });

@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import crypto from "crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../src/db";
@@ -20,6 +18,7 @@ import type { Context } from "hono";
 import type { HonoEnv } from "../types";
 import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
 import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
+import { uploadImageToCloudinary } from "../lib/functions/cloudinary";
 
 type StageInput = {
   title?: string;
@@ -380,16 +379,14 @@ export const newHackathon = async (c: AppContext) => {
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
 
-    let filePath: string | undefined;
+    let headerImageUrl: string | undefined;
 
     if (file) {
-      const ext = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${safeTitle}${ext ? `.${ext}` : ""}`;
-      filePath = path.join("images", fileName);
-
-      await mkdir(path.dirname(filePath), { recursive: true });
       const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(filePath, buffer);
+      headerImageUrl = await uploadImageToCloudinary(buffer, {
+        folder: process.env.CLOUDINARY_FOLDER ?? "hackathon-headers",
+        public_id: `${safeTitle || "hackathon-header"}-${Date.now()}`,
+      });
     }
 
     const hackathonId = crypto.randomUUID();
@@ -398,7 +395,7 @@ export const newHackathon = async (c: AppContext) => {
       id: hackathonId,
       title,
       description: body.description as string,
-      headerImage: filePath ?? null,
+      headerImage: headerImageUrl ?? null,
       startDate: body.startDate as string,
       endDate: body.endDate as string,
       registrationDeadline: body.registrationDeadline as string,
@@ -463,7 +460,7 @@ export const newHackathon = async (c: AppContext) => {
     return c.json({
       message: "Hackathon created successfully",
       hackathonId,
-      filePath,
+      filePath: headerImageUrl,
     });
   } catch (error) {
     console.error(error);

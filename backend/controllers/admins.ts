@@ -12,8 +12,9 @@ import {
   submissions,
   teamMembers,
   teams,
+  user,
 } from "../src/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 
 export const deleteHackathon = async (c: Context) => {
   const id = c.req.param("id");
@@ -117,8 +118,8 @@ export const getAttendance = async (c: Context) => {
       and(
         eq(hackathonRoles.hackathonId, hackathonId),
         eq(hackathonRoles.userId, userId),
-        eq(hackathonRoles.role, "admin")
-      )
+        eq(hackathonRoles.role, "admin"),
+      ),
     )
     .limit(1);
 

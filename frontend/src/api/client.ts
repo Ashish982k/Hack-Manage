@@ -1,36 +1,24 @@
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL?.trim() ?? process.env.BACKEND_URL?.trim();
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
 
-if (!backendUrl) {
-  throw new Error(
-    "NEXT_PUBLIC_BACKEND_URL is not configured. Set BACKEND_URL in frontend/.env.",
-  );
+if (!BACKEND_URL) {
+  throw new Error("Backend URL missing. Set NEXT_PUBLIC_BACKEND_URL in .env");
 }
 
-export const BACKEND_URL = backendUrl.replace(/\/+$/, "");
+export const buildApiUrl = (path: string) => {
+  return BACKEND_URL + path;
+};
 
-const normalizePath = (path: string) =>
-  path.startsWith("/") ? path : `/${path}`;
-
-export const buildApiUrl = (path: string) =>
-  `${BACKEND_URL}${normalizePath(path)}`;
-
-export const fetchFromApi = (path: string, init: RequestInit = {}) =>
-  fetch(buildApiUrl(path), {
+export const fetchFromApi = (path: string, init?: RequestInit) => {
+  return fetch(buildApiUrl(path), {
     credentials: "include",
     ...init,
   });
+};
 
-export const buildApiAssetUrl = (assetPath: string) => {
-  const normalizedInput = assetPath.trim();
-
-  if (
-    /^https?:\/\//i.test(normalizedInput) ||
-    normalizedInput.startsWith("data:")
-  ) {
-    return normalizedInput;
+export const buildApiAssetUrl = (path: string) => {
+  if (path.startsWith("http") || path.startsWith("data:")) {
+    return path;
   }
 
-  const normalizedAssetPath = normalizedInput.replace(/\\/g, "/").replace(/^\/+/, "");
-  return `${BACKEND_URL}/${normalizedAssetPath}`;
+  return BACKEND_URL + "/" + path;
 };

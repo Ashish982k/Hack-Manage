@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "../../src/db";
-import { hackathons, hackathonRoles } from "../../src/db/schema";
+import { db } from "../../src/db/index.js";
+import { hackathons, hackathonRoles } from "../../src/db/schema.js";
 
 export const isHackathonAdmin = async (
   hackathonId: string,

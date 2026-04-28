@@ -3,23 +3,18 @@ import { cors } from "hono/cors";
 import { eq } from "drizzle-orm";
 
 import { auth } from "../lib/auth.js";
-import { db } from "./db";
+import { db } from "./db/index.js";
 import { user } from "./db/schema.js";
-import Teams from "../routers/team";
-import Hack from "../routers/hack";
+import Teams from "../routers/team.js";
+import Hack from "../routers/hack.js";
 
 const app = new Hono();
 
-const frontendUrl =
-  process.env.CLIENT_URL ??
-  "http://localhost:3000";
-
+const frontendUrl = process.env.FRONTEND_URL as string;
 app.use(
   "*",
   cors({
     origin: frontendUrl,
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 );
@@ -28,9 +23,6 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 app.route("/hackathons", Hack);
 app.route("/teams", Teams);
-app.get("/", (c) => {
-  return c.text("Hono on Vercel working");
-});
 
 app.get("/users/check", async (c) => {
   const email = c.req.query("email");
@@ -47,4 +39,3 @@ app.get("/users/check", async (c) => {
 });
 
 export default app;
-

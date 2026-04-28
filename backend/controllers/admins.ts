@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import {
   evaluations,
   hackathonParticipants,
@@ -13,7 +13,7 @@ import {
   teamMembers,
   teams,
   user,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import { and, eq, inArray, or } from "drizzle-orm";
 
 export const deleteHackathon = async (c: Context) => {

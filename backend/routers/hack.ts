@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { authMiddleware } from "../middleware/auth.middleware";
-import type { HonoEnv } from "../types";
-import { db } from "../src/db";
-import { hackathons, problemStatements, stages } from "../src/db/schema";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+import type { HonoEnv } from "../types.js";
+import { db } from "../src/db/index.js";
+import { hackathons, problemStatements, stages } from "../src/db/schema.js";
 import { asc, eq } from "drizzle-orm";
-import { deleteHackathon, getAttendance } from "../controllers/admins";
+import { deleteHackathon, getAttendance } from "../controllers/admins.js";
 import {
   upload,
   newHackathon,
@@ -15,8 +15,8 @@ import {
   saveHackathonSchedules,
   updateHackathonRoles,
   deleteUser,
-} from "../controllers/Hackathon";
-import { judgeMiddleware } from "../middleware/judge.middleware";
+} from "../controllers/Hackathon.js";
+import { judgeMiddleware } from "../middleware/judge.middleware.js";
 import {
   confirmFinalWinners,
   createShortlistedTeams,
@@ -24,8 +24,8 @@ import {
   fetchEvaluatedTeams,
   fetchShortlistedTeams,
   getSubmissions,
-} from "../controllers/judges";
-import { generateQR, markQR } from "../controllers/qr";
+} from "../controllers/judges.js";
+import { generateQR, markQR } from "../controllers/qr.js";
 
 const Hack = new Hono<HonoEnv>();
 Hack.post("/:id/uploads", authMiddleware, upload);

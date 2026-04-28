@@ -7,7 +7,7 @@ import { user } from "./db/schema.js";
 import Teams from "../routers/team.js";
 import Hack from "../routers/hack.js";
 const app = new Hono();
-const frontendUrl = process.env.CLIENT_URL ??
+const frontendUrl = process.env.FRONTEND_URL ??
     "http://localhost:3000";
 app.use("*", cors({
     origin: frontendUrl,

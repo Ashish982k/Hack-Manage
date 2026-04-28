@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import {
   hackathons,
   hackathonParticipants,
@@ -13,12 +13,12 @@ import {
   teams,
   user,
   hackathonRoles,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import type { Context } from "hono";
-import type { HonoEnv } from "../types";
-import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
-import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles";
-import { uploadImageToCloudinary } from "../lib/functions/cloudinary";
+import type { HonoEnv } from "../types.js";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
+import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles.js";
+import { uploadImageToCloudinary } from "../lib/functions/cloudinary.js";
 
 type StageInput = {
   title?: string;

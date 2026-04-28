@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
-const normalizeUrl = (value: string | undefined) =>
-  value?.trim().replace(/\/+$/, "");
-
-const frontendUrl = normalizeUrl(process.env.FRONTEND_URL);
-const backendUrl = normalizeUrl(process.env.BACKEND_URL);
+const frontendUrl = process.env.FRONTEND_URL!;
+const backendUrl = process.env.BACKEND_URL!;
 
 if (!frontendUrl || !backendUrl) {
   throw new Error(

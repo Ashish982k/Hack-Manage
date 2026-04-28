@@ -1,7 +1,7 @@
-import { transporter } from "../lib/mailer";
-import { db } from "../src/db";
+import { transporter } from "../lib/mailer.js";
+import { db } from "../src/db/index.js";
 import type { Context } from "hono";
-import type { HonoEnv } from "../types";
+import type { HonoEnv } from "../types.js";
 import {
   hackathonRoles,
   teams,
@@ -11,7 +11,7 @@ import {
   shortlistedTeams,
   teamMembers,
   user,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import { and, eq, inArray } from "drizzle-orm/sql/expressions/conditions";
 import { desc, sql } from "drizzle-orm";
 

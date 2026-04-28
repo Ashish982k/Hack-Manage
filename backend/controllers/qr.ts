@@ -1,4 +1,4 @@
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import {
   shortlistedTeams,
   hackathonSchedules,
@@ -7,9 +7,9 @@ import {
   stages,
   qrCodes,
   teams,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { HonoEnv } from "../types";
+import type { HonoEnv } from "../types.js";
 import type { Context } from "hono";
 import crypto from "crypto";
 

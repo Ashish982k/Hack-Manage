@@ -5,14 +5,14 @@ import {
   stages,
   evaluations,
   shortlistedTeams,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import { eq, and, inArray, sql, desc } from "drizzle-orm";
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import type { Context } from "hono";
-import { sendWinnerEmails } from "./mail";
-import { getUserIdFromContext } from "../lib/functions/auth";
-import { isHackathonJudge, isHackathonJudgeOrAdmin } from "../lib/functions/roles";
-import { resolveSubmissionStageId } from "../lib/functions/stage";
+import { sendWinnerEmails } from "./mail.js";
+import { getUserIdFromContext } from "../lib/functions/auth.js";
+import { isHackathonJudge, isHackathonJudgeOrAdmin } from "../lib/functions/roles.js";
+import { resolveSubmissionStageId } from "../lib/functions/stage.js";
 
 export const getSubmissions = async (c: Context) => {
   try {

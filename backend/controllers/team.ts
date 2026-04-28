@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { and, eq } from "drizzle-orm";
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import {
   hackathonRoles,
   teamMembers,
@@ -10,12 +10,12 @@ import {
   submissions,
   evaluations,
   user,
-} from "../src/db/schema";
+} from "../src/db/schema.js";
 import type { Context } from "hono";
-import type { HonoEnv } from "../types";
-import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership";
-import { isHackathonAdmin } from "../lib/functions/roles";
-import { resolveSubmissionStageId } from "../lib/functions/stage";
+import type { HonoEnv } from "../types.js";
+import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
+import { isHackathonAdmin } from "../lib/functions/roles.js";
+import { resolveSubmissionStageId } from "../lib/functions/stage.js";
 
 type AppContext = Context<HonoEnv>;
 

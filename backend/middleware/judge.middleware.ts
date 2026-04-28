@@ -1,6 +1,6 @@
-import { hackathonRoles } from "../src/db/schema";
+import { hackathonRoles } from "../src/db/schema.js";
 import type { Context, Next } from "hono";
-import { db } from "../src/db";
+import { db } from "../src/db/index.js";
 import { eq, and } from "drizzle-orm";
 
 export const judgeMiddleware = async (c: Context, next: Next) => {

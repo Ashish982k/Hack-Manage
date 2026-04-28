@@ -6,8 +6,8 @@ import {
   removeTeamMember,
   updateTeam,
   updateTeamMember,
-} from "../controllers/team";
-import { authMiddleware } from "../middleware/auth.middleware";
+} from "../controllers/team.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const Teams = new Hono();
 Teams.use("*", authMiddleware);

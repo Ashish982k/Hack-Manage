@@ -5,6 +5,7 @@ import { hackathons, hackathonParticipants, evaluations, problemStatements, subm
 import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
 import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles.js";
 import { uploadImageToCloudinary } from "../lib/functions/cloudinary.js";
+import { getCurrentStageReferenceTime } from "../lib/functions/stage.js";
 const STAGE_TYPES = ["SUBMISSION", "EVALUATION", "FINAL"];
 const SCHEDULE_TYPES = ["entry", "breakfast", "lunch", "dinner"];
 const isFileLike = (value) => !!value &&
@@ -158,8 +159,9 @@ export const upload = async (c) => {
         if (!membership)
             return c.json({ message: "Not in a team" }, 400);
         const teamId = membership.team.id;
+        const stageReferenceTime = getCurrentStageReferenceTime();
         const activeStage = await db.query.stages.findFirst({
-            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime(${stageReferenceTime})`, sql `datetime(${stages.endTime}) >= datetime(${stageReferenceTime})`),
         });
         if (!activeStage) {
             return c.json({ message: "No active stage, submission not allowed" }, 400);
@@ -444,8 +446,9 @@ export const getJudgeAccess = async (c) => {
             return c.json({ message: "Hackathon not found" }, 404);
         const isJudge = await isHackathonJudge(hackathonId, currentUser.id);
         const isAdmin = await isHackathonAdmin(hackathonId, currentUser.id, hackathon.createdBy);
+        const stageReferenceTime = getCurrentStageReferenceTime();
         const activeStage = await db.query.stages.findFirst({
-            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime('now', 'localtime')`, sql `datetime(${stages.endTime}) >= datetime('now', 'localtime')`),
+            where: and(eq(stages.hackathonId, hackathonId), sql `datetime(${stages.startTime}) <= datetime(${stageReferenceTime})`, sql `datetime(${stages.endTime}) >= datetime(${stageReferenceTime})`),
             orderBy: [desc(sql `datetime(${stages.startTime})`)],
         });
         return c.json({

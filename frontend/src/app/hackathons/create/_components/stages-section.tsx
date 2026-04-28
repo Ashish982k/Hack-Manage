@@ -96,7 +96,7 @@ export function StagesSection({
                         onChange={(event) =>
                           onUpdateStage(stage.id, "startDate", event.target.value)
                         }
-                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
+                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:light]"
                         required
                       />
                     </div>
@@ -110,7 +110,7 @@ export function StagesSection({
                         onChange={(event) =>
                           onUpdateStage(stage.id, "endDate", event.target.value)
                         }
-                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:dark]"
+                        className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-pink-500/40 rounded-xl [color-scheme:light]"
                         required
                       />
                     </div>

@@ -1,11 +1,15 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
+export const BACKEND_URL = (
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.BACKEND_URL ||
+  ""
+).replace(/\/+$/, "");
 
 if (!BACKEND_URL) {
   throw new Error("Backend URL missing. Set NEXT_PUBLIC_BACKEND_URL in .env");
 }
 
 export const buildApiUrl = (path: string) => {
-  return BACKEND_URL + path;
+  return `${BACKEND_URL}${path}`;
 };
 
 export const fetchFromApi = (path: string, init?: RequestInit) => {
@@ -20,5 +24,5 @@ export const buildApiAssetUrl = (path: string) => {
     return path;
   }
 
-  return BACKEND_URL + "/" + path;
+  return `${BACKEND_URL}/${path.replace(/^\/+/, "")}`;
 };

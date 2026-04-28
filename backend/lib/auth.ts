@@ -3,22 +3,24 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../src/db/index.js";
 import { openAPI } from "better-auth/plugins";
 import * as schema from "../src/db/schema.js";
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
 
-const serverUrl = process.env.BETTER_AUTH_URL!;
-const appUrl = process.env.FRONTEND_URL!;
+const serverUrl = "http://localhost:5000";
 
-if (!serverUrl || !appUrl) {
-  throw new Error("BETTER_AUTH_URL or FRONTEND_URL missing");
+const frontendUrl = "http://localhost:3000";
+
+if (!serverUrl) {
+  throw new Error("BETTER_AUTH_URL (or BACKEND_URL) missing");
 }
 
 export const auth = betterAuth({
-  baseURL: serverUrl,
+  baseURL: "http://localhost:5000",
 
   secret: process.env.BETTER_AUTH_SECRET!,
 
-  trustedOrigins: [serverUrl, appUrl],
-  onErrorURL: `${appUrl}/login`,
+  trustedOrigins: [serverUrl, frontendUrl],
+  onErrorURL: `${frontendUrl}/login`,
 
   database: drizzleAdapter(db, {
     provider: "sqlite",

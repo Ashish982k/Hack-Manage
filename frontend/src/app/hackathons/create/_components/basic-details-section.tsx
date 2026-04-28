@@ -114,7 +114,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={registrationDeadline}
               onChange={(event) => onRegistrationDeadlineChange(event.target.value)}
-              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:light]"
               required
             />
           </div>
@@ -130,7 +130,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={startDate}
               onChange={(event) => onStartDateChange(event.target.value)}
-              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:light]"
               required
             />
           </div>
@@ -143,7 +143,7 @@ export function BasicDetailsSection({
               type="datetime-local"
               value={endDate}
               onChange={(event) => onEndDateChange(event.target.value)}
-              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+              className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:light]"
               required
             />
           </div>

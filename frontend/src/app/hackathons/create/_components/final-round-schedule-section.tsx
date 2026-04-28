@@ -88,7 +88,7 @@ export function FinalRoundScheduleSection({
                         event.target.value,
                       )
                     }
-                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:light]"
                     required={isEnabled}
                     disabled={!isEnabled}
                   />
@@ -105,7 +105,7 @@ export function FinalRoundScheduleSection({
                     onChange={(event) =>
                       onUpdateScheduleTime(item.key, "endTime", event.target.value)
                     }
-                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:dark]"
+                    className="bg-white/[0.04] border-white/10 text-white/80 focus-visible:ring-purple-500/40 rounded-xl [color-scheme:light]"
                     required={isEnabled}
                     disabled={!isEnabled}
                   />

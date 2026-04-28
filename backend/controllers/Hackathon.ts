@@ -19,6 +19,7 @@ import type { HonoEnv } from "../types.js";
 import { ensureParticipant, findMembershipForHackathon } from "../lib/functions/membership.js";
 import { isHackathonAdmin, isHackathonJudge } from "../lib/functions/roles.js";
 import { uploadImageToCloudinary } from "../lib/functions/cloudinary.js";
+import { getCurrentStageReferenceTime } from "../lib/functions/stage.js";
 
 type StageInput = {
   title?: string;
@@ -254,11 +255,12 @@ export const upload = async (c: AppContext) => {
     if (!membership) return c.json({ message: "Not in a team" }, 400);
 
     const teamId = membership.team.id;
+    const stageReferenceTime = getCurrentStageReferenceTime();
     const activeStage = await db.query.stages.findFirst({
       where: and(
         eq(stages.hackathonId, hackathonId),
-        sql`datetime(${stages.startTime}) <= datetime('now', 'localtime')`,
-        sql`datetime(${stages.endTime}) >= datetime('now', 'localtime')`,
+        sql`datetime(${stages.startTime}) <= datetime(${stageReferenceTime})`,
+        sql`datetime(${stages.endTime}) >= datetime(${stageReferenceTime})`,
       ),
     });
 
@@ -647,11 +649,12 @@ export const getJudgeAccess = async (c: AppContext) => {
       currentUser.id,
       hackathon.createdBy,
     );
+    const stageReferenceTime = getCurrentStageReferenceTime();
     const activeStage = await db.query.stages.findFirst({
       where: and(
         eq(stages.hackathonId, hackathonId),
-        sql`datetime(${stages.startTime}) <= datetime('now', 'localtime')`,
-        sql`datetime(${stages.endTime}) >= datetime('now', 'localtime')`,
+        sql`datetime(${stages.startTime}) <= datetime(${stageReferenceTime})`,
+        sql`datetime(${stages.endTime}) >= datetime(${stageReferenceTime})`,
       ),
       orderBy: [desc(sql`datetime(${stages.startTime})`)],
     });

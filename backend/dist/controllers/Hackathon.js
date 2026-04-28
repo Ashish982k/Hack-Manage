@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import crypto from "crypto";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../src/db/index.js";
 import { hackathons, hackathonParticipants, evaluations, problemStatements, submissions, teamMembers, stages, hackathonSchedules, teams, user, hackathonRoles, } from "../src/db/schema.js";

@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && tsc-alias --resolve-full-paths",
-    "start": "node dist/index.js",
-    "dev:vercel": "vercel dev",
+    "start": "node ./dist/src/index.js",
+    "dev:vercel": "npm run build && vercel dev",
     "deploy": "vercel --prod"
   },
   "dependencies": {

@@ -20,7 +20,9 @@ app.use(
 );
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
-
+app.get("/", (c) => {
+  return c.text("Running");
+});
 app.route("/hackathons", Hack);
 app.route("/teams", Teams);
 

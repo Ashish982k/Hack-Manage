@@ -4,49 +4,42 @@ import { db } from "../src/db/index.js";
 import { openAPI } from "better-auth/plugins";
 import * as schema from "../src/db/schema.js";
 import "dotenv/config";
-const normalizeOrigin = (value) => {
-    if (!value)
-        return null;
-    const trimmed = value.trim();
-    if (!trimmed)
-        return null;
-    try {
-        return new URL(trimmed).origin;
-    }
-    catch {
-        return null;
-    }
-};
-const parseOrigins = (value) => (value ?? "")
-    .split(",")
-    .map((origin) => normalizeOrigin(origin))
-    .filter((origin) => Boolean(origin));
-const trustedOrigins = Array.from(new Set([
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    ...parseOrigins(process.env.FRONTEND_URL),
-    ...parseOrigins(process.env.NEXT_PUBLIC_FRONTEND_URL),
-    ...parseOrigins(process.env.CLIENT_URL),
-    ...parseOrigins(process.env.TRUSTED_ORIGINS),
-]));
+const serverUrl = process.env.BETTER_AUTH_URL;
+const appUrl = process.env.FRONTEND_URL;
+if (!serverUrl || !appUrl) {
+    throw new Error("BETTER_AUTH_URL or FRONTEND_URL missing");
+}
 export const auth = betterAuth({
+    baseURL: serverUrl,
+    secret: process.env.BETTER_AUTH_SECRET,
+    trustedOrigins: [serverUrl, appUrl],
+    onErrorURL: `${appUrl}/login`,
     database: drizzleAdapter(db, {
         provider: "sqlite",
         schema,
     }),
-    emailAndPassword: {
-        enabled: true,
-    },
     socialProviders: {
         google: {
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         },
-        github: {
-            clientId: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    },
+    session: {
+        expiresIn: 60 * 60 * 24 * 7,
+        updateAge: 60 * 60 * 24,
+        cookieCache: {
+            enabled: true,
+            maxAge: 300,
         },
     },
-    trustedOrigins,
-    plugins: [openAPI()],
+    advanced: {
+        useSecureCookies: process.env.NODE_ENV === "production",
+        crossSubDomainCookies: {
+            enabled: false,
+        },
+    },
+    emailAndPassword: {
+        enabled: false,
+    },
+    debug: true,
 });

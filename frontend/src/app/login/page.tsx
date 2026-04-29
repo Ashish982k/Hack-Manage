@@ -4,6 +4,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { BACKEND_URL } from "@/api/client";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,10 +36,9 @@ export default function LoginPage() {
   const handleLogin = async (provider: "google" | "github") => {
     await authClient.signIn.social({
       provider,
-
-      callbackURL: "/",
-      errorCallbackURL: "/login",
-      newUserCallbackURL: "/",
+      callbackURL: `${BACKEND_URL}/`,
+      errorCallbackURL: `${window.location.origin}/login`,
+      newUserCallbackURL: `${BACKEND_URL}/`,
     });
   };
 

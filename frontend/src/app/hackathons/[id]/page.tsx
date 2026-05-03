@@ -19,6 +19,7 @@ import {
   fetchJudgeAccess as fetchHackathonJudgeAccess,
 } from "@/api";
 
+import { AdminReportsSection } from "./_components/admin-reports-section";
 import { HackathonDetailsSection } from "./_components/hackathon-details-section";
 import { HeroSection } from "./_components/hero-section";
 import { LeaderboardSection } from "./_components/leaderboard-section";
@@ -436,6 +437,9 @@ export default function HackathonDetailPage({
   const evaluationStageId =
     activeEvaluationStage?.id ?? fallbackEvaluationStage?.id ?? null;
   const finalStageId = resolveFinalStageIdFromStages(stageList);
+  const isFinalRoundEnded = React.useMemo(() => {
+    return Boolean(finalStageInfo?.endTime && new Date(finalStageInfo.endTime).getTime() < now);
+  }, [finalStageInfo, now]);
   const leaderboardStageId = evaluationStageId ?? finalStageId;
   const roleLabel = isHackathonAdmin
     ? "You are an Admin"
@@ -583,8 +587,15 @@ export default function HackathonDetailPage({
     return () => context.revert();
   }, []);
 
-  const { handleSubmit, toggleTeamShortlist, handleConfirmShortlist, handleJoin } =
-    useHackathonActions({
+  const {
+    handleSubmit,
+    toggleTeamShortlist,
+    handleConfirmShortlist,
+    handleJoin,
+    handleDownloadTeamLogs,
+    handleDownloadTeamAnalytics,
+    handleDownloadJudgeAnalytics,
+  } = useHackathonActions({
       hackathonId,
       sessionExists: Boolean(session),
       push: router.push,
@@ -686,6 +697,14 @@ export default function HackathonDetailPage({
                   message: "(mock)",
                 })
               }
+            />
+
+            <AdminReportsSection
+              isHackathonAdmin={isHackathonAdmin}
+              isFinalRoundEnded={isFinalRoundEnded}
+              onDownloadTeamLogs={handleDownloadTeamLogs}
+              onDownloadTeamAnalytics={handleDownloadTeamAnalytics}
+              onDownloadJudgeAnalytics={handleDownloadJudgeAnalytics}
             />
 
             <LeaderboardSection

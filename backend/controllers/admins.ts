@@ -3,7 +3,6 @@ import { db } from "../src/db/index.js";
 import {
   evaluations,
   hackathonParticipants,
-  qrCodes,
   hackathonRoles,
   hackathons,
   problemStatements,
@@ -13,8 +12,9 @@ import {
   teamMembers,
   teams,
   user,
+  qrCodes,
 } from "../src/db/schema.js";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 export const deleteHackathon = async (c: Context) => {
   const id = c.req.param("id");

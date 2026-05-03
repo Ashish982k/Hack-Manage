@@ -124,6 +124,12 @@ export const fetchHackathonQrCodes = (hackathonId: string) =>
 export const fetchHackathonAttendance = (hackathonId: string) =>
   fetchFromApi(`/hackathons/${encode(hackathonId)}/attendance`);
 
+export const downloadHackathonLogsReport = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/admin/download-logs`);
+
+export const downloadHackathonTeamLogsReport = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/admin/download-team-logs`);
+
 export const scanHackathonQr = (
   hackathonId: string,
   payload: { token: string },
@@ -172,3 +178,9 @@ export const evaluateTeamSubmission = (
     },
   );
 };
+
+export const downloadHackathonTeamAnalyticsReport = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/admin/download-team-analytics`);
+
+export const downloadHackathonJudgeAnalyticsReport = (hackathonId: string) =>
+  fetchFromApi(`/hackathons/${encode(hackathonId)}/admin/download-judge-analytics`);

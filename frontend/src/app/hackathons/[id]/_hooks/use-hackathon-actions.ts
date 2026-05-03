@@ -8,6 +8,9 @@ import {
   joinHackathon,
   leaveHackathon,
   uploadHackathonSubmission,
+  downloadHackathonTeamLogsReport,
+  downloadHackathonTeamAnalyticsReport,
+  downloadHackathonJudgeAnalyticsReport,
 } from "@/api";
 
 import type {
@@ -378,10 +381,106 @@ export function useHackathonActions({
     setToast,
   ]);
 
+  const handleDownloadTeamLogs = React.useCallback(async () => {
+    try {
+      const res = await downloadHackathonTeamLogsReport(hackathonId);
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => null);
+        setToast({
+          kind: "error",
+          title: "Download failed",
+          message: hasMessage(data) && data.message ? data.message : "Could not download report.",
+        });
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hackathon-team-report.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setToast({
+        kind: "error",
+        title: "Download failed",
+        message: "An unexpected error occurred.",
+      });
+    }
+  }, [hackathonId, setToast]);
+
+  const handleDownloadTeamAnalytics = React.useCallback(async () => {
+    try {
+      const res = await downloadHackathonTeamAnalyticsReport(hackathonId);
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => null);
+        setToast({
+          kind: "error",
+          title: "Download failed",
+          message: hasMessage(data) && data.message ? data.message : "Could not download report.",
+        });
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hackathon-team-analytics.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setToast({
+        kind: "error",
+        title: "Download failed",
+        message: "An unexpected error occurred.",
+      });
+    }
+  }, [hackathonId, setToast]);
+
+  const handleDownloadJudgeAnalytics = React.useCallback(async () => {
+    try {
+      const res = await downloadHackathonJudgeAnalyticsReport(hackathonId);
+      if (!res.ok) {
+        const data: unknown = await res.json().catch(() => null);
+        setToast({
+          kind: "error",
+          title: "Download failed",
+          message: hasMessage(data) && data.message ? data.message : "Could not download report.",
+        });
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "hackathon-judge-analytics.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setToast({
+        kind: "error",
+        title: "Download failed",
+        message: "An unexpected error occurred.",
+      });
+    }
+  }, [hackathonId, setToast]);
+
   return {
     handleSubmit,
     toggleTeamShortlist,
     handleConfirmShortlist,
     handleJoin,
+    handleDownloadTeamLogs,
+    handleDownloadTeamAnalytics,
+    handleDownloadJudgeAnalytics,
   };
 }

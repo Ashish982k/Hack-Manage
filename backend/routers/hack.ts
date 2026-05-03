@@ -5,6 +5,7 @@ import { db } from "../src/db/index.js";
 import { hackathons, problemStatements, stages } from "../src/db/schema.js";
 import { asc, eq } from "drizzle-orm";
 import { deleteHackathon, getAttendance } from "../controllers/admins.js";
+import { downloadLogsReport, downloadTeamLogsReport, downloadTeamAnalyticsReport, downloadJudgeAnalyticsReport } from "../controllers/report.js";
 import {
   upload,
   newHackathon,
@@ -115,5 +116,8 @@ Hack.post("/:id/scan", authMiddleware, markQR);
 
 // Analytics
 Hack.get("/:id/attendance", authMiddleware, getAttendance);
-
+Hack.get("/:id/admin/download-logs", authMiddleware, downloadLogsReport);
+Hack.get("/:id/admin/download-team-logs", authMiddleware, downloadTeamLogsReport);
+Hack.get("/:id/admin/download-team-analytics", authMiddleware, downloadTeamAnalyticsReport);
+Hack.get("/:id/admin/download-judge-analytics", authMiddleware, downloadJudgeAnalyticsReport);
 export default Hack;

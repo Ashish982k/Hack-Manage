@@ -203,6 +203,12 @@ export const fetchEvaluatedTeams = async (c: Context) => {
         teamId: teams.id,
         teamName: teams.name,
         totalScore: sql<number>`AVG(${evaluations.total})`,
+        technical: sql<number>`AVG(${evaluations.technical})`,
+        feasibility: sql<number>`AVG(${evaluations.feasibility})`,
+        innovation: sql<number>`AVG(${evaluations.innovation})`,
+        presentation: sql<number>`AVG(${evaluations.presentation})`,
+        impact: sql<number>`AVG(${evaluations.impact})`,
+        evaluationCount: sql<number>`COUNT(${evaluations.id})`,
       })
       .from(submissions)
       .innerJoin(teams, eq(submissions.teamId, teams.id))

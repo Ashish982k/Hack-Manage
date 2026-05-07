@@ -37,9 +37,33 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Proxy Better Auth — keeps session cookies on the same origin
       {
         source: "/api/auth/:path*",
         destination: `${backendUrl}/api/auth/:path*`,
+      },
+      // Proxy backend REST API under /api/* to avoid clashing with Next.js
+      // page routes (e.g. the /hackathons page takes priority over a /hackathons
+      // rewrite, so we use /api/hackathons → backend /hackathons instead).
+      {
+        source: "/api/hackathons/:path*",
+        destination: `${backendUrl}/hackathons/:path*`,
+      },
+      {
+        source: "/api/hackathons",
+        destination: `${backendUrl}/hackathons`,
+      },
+      {
+        source: "/api/teams/:path*",
+        destination: `${backendUrl}/teams/:path*`,
+      },
+      {
+        source: "/api/teams",
+        destination: `${backendUrl}/teams`,
+      },
+      {
+        source: "/api/users/:path*",
+        destination: `${backendUrl}/users/:path*`,
       },
     ];
   },

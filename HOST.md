@@ -1,5 +1,7 @@
 # Hosting Hack-Manage — Frontend on Vercel + Backend on Render
 
+> **Frontend URL:** `https://hack-manage-l2e9.vercel.app`
+
 ## Will Better Auth Cookies Work? ✅ Yes
 
 This is the most important question first.
@@ -15,7 +17,7 @@ Browser → frontend.vercel.app/api/auth/sign-in
                              │
                              └─▶ Returns response + Set-Cookie
              │
-             ← Cookie is set on frontend.vercel.app  ✅
+             ← Cookie is set on hack-manage-l2e9.vercel.app  ✅
 ```
 
 The cookie is always set on `frontend.vercel.app` (the browser's origin). Render's domain never appears in the browser at all. No cross-domain cookie issue — the proxy completely solves it.
@@ -28,7 +30,7 @@ The cookie is always set on `frontend.vercel.app` (the browser's origin). Render
 Browser (user)
   │
   ▼
-frontend.vercel.app          ← Next.js 16 (Vercel)
+hack-manage-l2e9.vercel.app  ← Next.js 16 (Vercel)
   │
   │  /api/auth/*      ──▶  hack-manage-backend.onrender.com/api/auth/*
   │  /api/hackathons/* ──▶  hack-manage-backend.onrender.com/hackathons/*
@@ -96,8 +98,8 @@ Go to your Render service → **Environment** tab and add all of these:
 | `GITHUB_CLIENT_ID` | your GitHub client ID |
 | `GITHUB_CLIENT_SECRET` | your GitHub client secret |
 | `BETTER_AUTH_SECRET` | a long random string (32+ chars) — **must match frontend** |
-| `BETTER_AUTH_URL` | `https://your-frontend.vercel.app` ← **frontend URL, not backend** |
-| `FRONTEND_URL` | `https://your-frontend.vercel.app` |
+| `BETTER_AUTH_URL` | `https://hack-manage-l2e9.vercel.app` ← **frontend URL, not backend** |
+| `FRONTEND_URL` | `https://hack-manage-l2e9.vercel.app` |
 | `TURSO_DATABASE_URL` | `libsql://yourdb.aws-ap-south-1.turso.io` |
 | `TURSO_AUTH_TOKEN` | your Turso auth token |
 | `CLOUDINARY_CLOUD_NAME` | your Cloudinary cloud name |
@@ -172,9 +174,9 @@ Go to **Vercel Dashboard → hack-manage-frontend → Settings → Environment V
 
 | Key | Value | Environment |
 |---|---|---|
-| `FRONTEND_URL` | `https://your-frontend.vercel.app` | Production |
+| `FRONTEND_URL` | `https://hack-manage-l2e9.vercel.app` | Production |
 | `FRONTEND_URL` | `http://localhost:3000` | Development |
-| `NEXT_PUBLIC_FRONTEND_URL` | `https://your-frontend.vercel.app` | Production |
+| `NEXT_PUBLIC_FRONTEND_URL` | `https://hack-manage-l2e9.vercel.app` | Production |
 | `NEXT_PUBLIC_FRONTEND_URL` | `http://localhost:3000` | Development |
 | `BACKEND_URL` | `https://hack-manage-backend.onrender.com` | Production |
 | `BACKEND_URL` | `http://localhost:5000` | Development |
@@ -209,11 +211,11 @@ Both Google and GitHub need your **frontend** production URL as the callback —
 1. Go to **APIs & Services → Credentials → your OAuth 2.0 Client**
 2. Add to **Authorized redirect URIs**:
    ```
-   https://your-frontend.vercel.app/api/auth/callback/google
+   https://hack-manage-l2e9.vercel.app/api/auth/callback/google
    ```
 3. Add to **Authorized JavaScript origins**:
    ```
-   https://your-frontend.vercel.app
+   https://hack-manage-l2e9.vercel.app
    ```
 
 ### GitHub OAuth — [github.com/settings/developers](https://github.com/settings/developers)
@@ -221,11 +223,11 @@ Both Google and GitHub need your **frontend** production URL as the callback —
 1. Open your OAuth App
 2. Set **Homepage URL**:
    ```
-   https://your-frontend.vercel.app
+   https://hack-manage-l2e9.vercel.app
    ```
 3. Set **Authorization callback URL**:
    ```
-   https://your-frontend.vercel.app/api/auth/callback/github
+   https://hack-manage-l2e9.vercel.app/api/auth/callback/github
    ```
 
 > These point to the **frontend** because Better Auth's OAuth flow goes through `/api/auth/*`, which the Next.js proxy intercepts and forwards to Render internally. The browser only ever sees the frontend domain.
@@ -237,8 +239,8 @@ Both Google and GitHub need your **frontend** production URL as the callback —
 ### Smoke Test Checklist
 
 - [ ] `https://hack-manage-backend.onrender.com/` → returns `Running`
-- [ ] `https://your-frontend.vercel.app/` → loads the home page without errors
-- [ ] `https://your-frontend.vercel.app/api/auth/session` → returns JSON `{"session":null,"user":null}` (not HTML)
+- [ ] `https://hack-manage-l2e9.vercel.app/` → loads the home page without errors
+- [ ] `https://hack-manage-l2e9.vercel.app/api/auth/session` → returns JSON `{"session":null,"user":null}` (not HTML)
 - [ ] Google login → completes and redirects back to the app
 - [ ] After login: DevTools → **Application → Cookies → your-frontend.vercel.app** → `better-auth.session_token` cookie exists ✅
 - [ ] `/hackathons` page → loads data from the backend
@@ -250,10 +252,10 @@ Both Google and GitHub need your **frontend** production URL as the callback —
 curl https://hack-manage-backend.onrender.com/
 
 # Is the auth proxy working? (Must return JSON, not HTML)
-curl https://your-frontend.vercel.app/api/auth/session
+curl https://hack-manage-l2e9.vercel.app/api/auth/session
 
 # Is the API proxy working? (Must return JSON)
-curl https://your-frontend.vercel.app/api/hackathons \
+curl https://hack-manage-l2e9.vercel.app/api/hackathons \
   -H "Cookie: better-auth.session_token=<your-token>"
 ```
 

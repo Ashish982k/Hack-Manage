@@ -43,8 +43,6 @@ app.get("/users/check", async (c) => {
   return c.json({ exists: !!foundUser });
 });
 
-dotenv.config();
-
 serve(
   {
     fetch: app.fetch,

@@ -5,15 +5,19 @@ import { openAPI } from "better-auth/plugins";
 import * as schema from "../src/db/schema.js";
 import dotenv from "dotenv";
 dotenv.config();
-const serverUrl = "http://localhost:5000";
-const frontendUrl = "http://localhost:3000";
-if (!serverUrl) {
-    throw new Error("BETTER_AUTH_URL (or BACKEND_URL) missing");
+// Better Auth must use the FRONTEND URL as its base
+// That's where the browser sends auth requests (via the Next.js proxy)
+// and where cookies get set.
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+if (!frontendUrl) {
+    throw new Error("FRONTEND_URL missing");
 }
 export const auth = betterAuth({
-    baseURL: "http://localhost:5000",
+    // baseURL = where the browser sends auth requests (via the Next.js proxy)
+    // This is ALWAYS the frontend URL, never the backend
+    baseURL: frontendUrl,
     secret: process.env.BETTER_AUTH_SECRET,
-    trustedOrigins: [serverUrl, frontendUrl],
+    trustedOrigins: [frontendUrl],
     onErrorURL: `${frontendUrl}/login`,
     database: drizzleAdapter(db, {
         provider: "sqlite",

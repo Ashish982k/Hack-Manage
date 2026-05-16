@@ -11,7 +11,7 @@ import Teams from "../routers/team.js";
 import Hack from "../routers/hack.js";
 const app = new Hono();
 app.use("*", cors({
-    origin: "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -33,7 +33,6 @@ app.get("/users/check", async (c) => {
         .limit(1);
     return c.json({ exists: !!foundUser });
 });
-dotenv.config();
 serve({
     fetch: app.fetch,
     port: 5000,

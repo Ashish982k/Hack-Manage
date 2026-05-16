@@ -6,23 +6,23 @@ import * as schema from "../src/db/schema.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-// The browser talks to the frontend (Next.js proxy) which forwards to this
-// backend internally. So Better Auth must treat the FRONTEND URL as its base —
-// that's where cookies get set.
+// Better Auth must use the FRONTEND URL as its base
+// That's where the browser sends auth requests (via the Next.js proxy)
+// and where cookies get set.
 const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-const serverUrl = process.env.BETTER_AUTH_URL || "http://localhost:5000";
 
-if (!serverUrl) {
-  throw new Error("BETTER_AUTH_URL (or BACKEND_URL) missing");
+if (!frontendUrl) {
+  throw new Error("FRONTEND_URL missing");
 }
 
 export const auth = betterAuth({
   // baseURL = where the browser sends auth requests (via the Next.js proxy)
+  // This is ALWAYS the frontend URL, never the backend
   baseURL: frontendUrl,
 
   secret: process.env.BETTER_AUTH_SECRET!,
 
-  trustedOrigins: [frontendUrl, serverUrl],
+  trustedOrigins: [frontendUrl],
   onErrorURL: `${frontendUrl}/login`,
 
   database: drizzleAdapter(db, {

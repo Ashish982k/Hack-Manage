@@ -36,9 +36,9 @@ export default function LoginPage() {
   const handleLogin = async (provider: "google" | "github") => {
     await authClient.signIn.social({
       provider,
-      callbackURL: `${BACKEND_URL}/`,
-      errorCallbackURL: `${window.location.origin}/login`,
-      newUserCallbackURL: `${BACKEND_URL}/`,
+      callbackURL: `http://localhost:3000`,
+      errorCallbackURL: `http://localhost:3000/login`,
+      newUserCallbackURL: `http://localhost:3000`,
     });
   };
 

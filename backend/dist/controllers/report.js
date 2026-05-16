@@ -1,9 +1,9 @@
 import { db } from "../src/db/index.js";
-import { qrCodes, hackathons, shortlistedTeams, stages, teamMembers, teams, user, } from "../src/db/schema.js";
+import { qrCodes, hackathons, shortlistedTeams, stages, teamMembers, teams, user, submissions, evaluations, } from "../src/db/schema.js";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { isHackathonAdmin } from "../lib/functions/roles.js";
 import { getCurrentStageReferenceTime } from "../lib/functions/stage.js";
-import { generateFinalReportPdf, generateTeamLogsReportPdf, } from "../lib/functions/pdf-report.js";
+import { generateFinalReportPdf, generateTeamLogsReportPdf, generateTeamAnalyticsPdf, generateJudgeAnalyticsPdf, } from "../lib/functions/pdf-report.js";
 const readCount = (value) => {
     if (typeof value === "number" && Number.isFinite(value))
         return value;
@@ -167,6 +167,11 @@ export const downloadTeamLogsReport = async (c) => {
         if (!isAdmin) {
             return c.json({ message: "Unauthorized" }, 403);
         }
+        const adminUser = await db.query.user.findFirst({
+            where: eq(user.id, currentUser.id),
+            columns: { email: true }
+        });
+        const adminEmail = adminUser?.email || "N/A";
         const [finalStage] = await db
             .select({
             id: stages.id,
@@ -274,6 +279,7 @@ export const downloadTeamLogsReport = async (c) => {
             title: "Hackathon Team Report",
             eventName: hackathon.title,
             eventDateLabel,
+            adminEmail,
             teams: teamReports,
         });
         return c.newResponse(new Uint8Array(pdfBuffer), 200, {
@@ -285,5 +291,222 @@ export const downloadTeamLogsReport = async (c) => {
     catch (error) {
         console.error("downloadTeamLogsReport failed:", error);
         return c.json({ message: "Something went wrong" }, 500);
+    }
+};
+export const downloadTeamAnalyticsReport = async (c) => {
+    const hackathonId = c.req.param("id");
+    const currentUser = c.get("user");
+    if (!currentUser?.id) {
+        return c.json({ message: "Unauthorized" }, 401);
+    }
+    if (!hackathonId) {
+        return c.json({ message: "Hackathon ID is required" }, 400);
+    }
+    try {
+        const adminEmailRes = await db
+            .select({ email: user.email })
+            .from(user)
+            .where(eq(user.id, currentUser.id))
+            .limit(1);
+        const adminEmail = adminEmailRes[0]?.email || "admin@example.com";
+        const hasAccess = await isHackathonAdmin(hackathonId, currentUser.id);
+        if (!hasAccess) {
+            return c.json({ message: "Forbidden" }, 403);
+        }
+        const hackathon = await db.query.hackathons.findFirst({
+            where: eq(hackathons.id, hackathonId),
+        });
+        if (!hackathon) {
+            return c.json({ message: "Hackathon not found" }, 404);
+        }
+        const allStages = await db
+            .select()
+            .from(stages)
+            .where(eq(stages.hackathonId, hackathonId))
+            .orderBy(asc(stages.startTime), asc(stages.id));
+        const finalStage = allStages[allStages.length - 1];
+        if (!finalStage) {
+            return c.json({ message: "No final stage found" }, 400);
+        }
+        const refTime = getCurrentStageReferenceTime();
+        if (finalStage.endTime && new Date(refTime) < new Date(finalStage.endTime)) {
+            return c.json({ message: "Final round is not completed yet" }, 400);
+        }
+        const allTeams = await db
+            .select()
+            .from(teams)
+            .where(eq(teams.hackathonId, hackathonId));
+        if (!allTeams.length) {
+            return c.json({ message: "No teams found" }, 404);
+        }
+        const allTeamMembers = await db
+            .select({
+            teamId: teamMembers.teamId,
+            userName: user.name,
+        })
+            .from(teamMembers)
+            .innerJoin(user, eq(teamMembers.userId, user.id))
+            .where(inArray(teamMembers.teamId, allTeams.map((t) => t.id)));
+        const allSubmissions = await db
+            .select({
+            teamId: submissions.teamId,
+            githubUrl: submissions.githubUrl,
+            pptUrl: submissions.pptUrl,
+        })
+            .from(submissions)
+            .where(inArray(submissions.teamId, allTeams.map((t) => t.id)));
+        const teamReports = allTeams.map((t) => {
+            const members = allTeamMembers
+                .filter((tm) => tm.teamId === t.id)
+                .map((tm) => ({
+                memberName: tm.userName ?? "Unknown Member",
+            }));
+            const teamSubs = allSubmissions.filter(sub => sub.teamId === t.id);
+            const latestSub = teamSubs.length > 0 ? teamSubs[teamSubs.length - 1] : null;
+            return {
+                teamName: t.name,
+                members,
+                githubUrl: latestSub?.githubUrl || null,
+                pptUrl: latestSub?.pptUrl || null,
+            };
+        });
+        const eventDate = finalStage.endTime ?? hackathon.endDate;
+        const eventDateLabel = eventDate
+            ? new Date(eventDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            })
+            : "N/A";
+        const pdfBuffer = await generateTeamAnalyticsPdf({
+            title: "Hackathon Team Analytics",
+            eventName: hackathon.title,
+            eventDateLabel,
+            adminEmail,
+            teams: teamReports,
+        });
+        return c.newResponse(new Uint8Array(pdfBuffer), 200, {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="hackathon-team-analytics.pdf"',
+            "Cache-Control": "no-store",
+        });
+    }
+    catch (error) {
+        console.error("downloadTeamAnalyticsReport failed:", error);
+        return c.json({ message: "Failed to generate team analytics report" }, 500);
+    }
+};
+export const downloadJudgeAnalyticsReport = async (c) => {
+    const hackathonId = c.req.param("id");
+    const currentUser = c.get("user");
+    if (!currentUser?.id) {
+        return c.json({ message: "Unauthorized" }, 401);
+    }
+    if (!hackathonId) {
+        return c.json({ message: "Hackathon ID is required" }, 400);
+    }
+    try {
+        const adminEmailRes = await db
+            .select({ email: user.email })
+            .from(user)
+            .where(eq(user.id, currentUser.id))
+            .limit(1);
+        const adminEmail = adminEmailRes[0]?.email || "admin@example.com";
+        const hasAccess = await isHackathonAdmin(hackathonId, currentUser.id);
+        if (!hasAccess) {
+            return c.json({ message: "Forbidden" }, 403);
+        }
+        const hackathon = await db.query.hackathons.findFirst({
+            where: eq(hackathons.id, hackathonId),
+        });
+        if (!hackathon) {
+            return c.json({ message: "Hackathon not found" }, 404);
+        }
+        const allStages = await db
+            .select()
+            .from(stages)
+            .where(eq(stages.hackathonId, hackathonId))
+            .orderBy(asc(stages.startTime), asc(stages.id));
+        const finalStage = allStages[allStages.length - 1];
+        if (!finalStage) {
+            return c.json({ message: "No final stage found" }, 400);
+        }
+        const refTime = getCurrentStageReferenceTime();
+        if (finalStage.endTime && new Date(refTime) < new Date(finalStage.endTime)) {
+            return c.json({ message: "Final round is not completed yet" }, 400);
+        }
+        const allTeams = await db
+            .select()
+            .from(teams)
+            .where(eq(teams.hackathonId, hackathonId));
+        if (!allTeams.length) {
+            return c.json({ message: "No teams found" }, 404);
+        }
+        const allSubmissions = await db
+            .select({
+            id: submissions.id,
+            teamId: submissions.teamId,
+        })
+            .from(submissions)
+            .where(inArray(submissions.teamId, allTeams.map((t) => t.id)));
+        let evals = [];
+        if (allSubmissions.length > 0) {
+            evals = await db
+                .select({
+                submissionId: evaluations.submissionId,
+                judgeName: user.name,
+                innovation: evaluations.innovation,
+                feasibility: evaluations.feasibility,
+                technical: evaluations.technical,
+                presentation: evaluations.presentation,
+                impact: evaluations.impact,
+                total: evaluations.total,
+            })
+                .from(evaluations)
+                .innerJoin(user, eq(evaluations.judgeId, user.id))
+                .where(inArray(evaluations.submissionId, allSubmissions.map((s) => s.id)));
+        }
+        const teamReports = allTeams.map((t) => {
+            const tSubs = allSubmissions.filter(s => s.teamId === t.id);
+            const teamEvals = evals
+                .filter((e) => tSubs.some(s => s.id === e.submissionId))
+                .map(e => ({
+                judgeName: e.judgeName ?? "Unknown",
+                innovation: e.innovation,
+                feasibility: e.feasibility,
+                technical: e.technical,
+                presentation: e.presentation,
+                impact: e.impact,
+                total: e.total,
+            }));
+            return {
+                teamName: t.name,
+                evaluations: teamEvals,
+            };
+        });
+        const eventDate = finalStage.endTime ?? hackathon.endDate;
+        const eventDateLabel = eventDate
+            ? new Date(eventDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            })
+            : "N/A";
+        const pdfBuffer = await generateJudgeAnalyticsPdf({
+            title: "Hackathon Judge Analytics",
+            eventName: hackathon.title,
+            eventDateLabel,
+            adminEmail,
+            teams: teamReports,
+        });
+        return c.newResponse(new Uint8Array(pdfBuffer), 200, {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="hackathon-judge-analytics.pdf"',
+            "Cache-Control": "no-store",
+        });
+    }
+    catch (error) {
+        console.error("downloadJudgeAnalyticsReport failed:", error);
+        return c.json({ message: "Failed to generate judge analytics report" }, 500);
     }
 };
